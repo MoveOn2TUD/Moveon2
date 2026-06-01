@@ -96,6 +96,11 @@
             width: 28px; height: 4px;
             margin-right: 8px; flex-shrink: 0;
             border-radius: 2px;
+            background-image: repeating-linear-gradient(
+                to right,
+                currentColor 0px, currentColor 6px,
+                transparent 6px, transparent 10px
+            );
         }
 
         #typeModal, #lineModal, #signModal, #errorModal {
@@ -382,7 +387,7 @@
         <h4>Beschilderung eintragen</h4>
         <div class="section-fields">
             <span class="field-label">Art der Beschilderung</span>
-            <input type="text" id="signType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
+            <input type="text" id="signType" placeholder="z. V. Wegweisung, Hinweisschild" maxlength="80" />
             <span class="field-label">Nutzungsfreigabe</span>
             <input type="date" id="signDate" required />
         </div>
@@ -446,7 +451,6 @@ var selectedLineSolid = false;
 var selectedPointType = null;
 var selectedPointColor = null;
 
-// Farbzuordnungen
 var pointColorMap = {
     'Fahrradständer / Vorderradhalter': '#e67e22',
     'Fahrradanlehnbügel': '#2980b9',
@@ -466,16 +470,13 @@ var lineColorMap = {
     'Unterführung': '#4a235a'
 };
 
-// -------------------------------------------------------
-// Storage-Schlüssel: zunächst aus URL-Parameter lesen,
-// kann später per postMessage überschrieben werden
-// -------------------------------------------------------
+// Storage-Schlüssel aus URL-Parameter
 var urlParams = new URLSearchParams(window.location.search);
 var karteId = urlParams.get('id') || 'default';
 var storageKey = 'karteGeoJSON_' + karteId;
 
 // -------------------------------------------------------
-// Zeichnungen aus GeoJSON wiederherstellen (wiederverwendbar)
+// Zeichnungen aus GeoJSON wiederherstellen
 // -------------------------------------------------------
 function restoreFromGeoJSON(geoData) {
     L.geoJSON(geoData, {
@@ -485,23 +486,15 @@ function restoreFromGeoJSON(geoData) {
                 return L.marker(latlng);
             }
             var color = '#555';
-            if (props.typ && pointColorMap[props.typ]) {
-                color = pointColorMap[props.typ];
-            } else if (props.typ && props.typ.startsWith('Sonstiges')) {
-                color = '#555';
-            }
-            return L.circleMarker(latlng, {
-                color: color, fillColor: color, fillOpacity: 1, radius: 8
-            });
+            if (props.typ && pointColorMap[props.typ]) color = pointColorMap[props.typ];
+            else if (props.typ && props.typ.startsWith('Sonstiges')) color = '#555';
+            return L.circleMarker(latlng, { color: color, fillColor: color, fillOpacity: 1, radius: 8 });
         },
         style: function(feature) {
             var props = feature.properties || {};
             var color = '#555';
-            if (props.typ && lineColorMap[props.typ]) {
-                color = lineColorMap[props.typ];
-            } else if (props.typ && props.typ.startsWith('Sonstiges')) {
-                color = '#555';
-            }
+            if (props.typ && lineColorMap[props.typ]) color = lineColorMap[props.typ];
+            else if (props.typ && props.typ.startsWith('Sonstiges')) color = '#555';
             var solid = (props.kategorie === 'Sonderbauwerk');
             return { color: color, weight: 5, opacity: 1, dashArray: solid ? null : '8, 6' };
         },
@@ -520,47 +513,65 @@ function restoreFromGeoJSON(geoData) {
     });
 }
 
-// Beim ersten Laden: gespeicherte Zeichnungen wiederherstellen
-var saved = localStorage.getItem(storageKey);
+// Beim Laden: zuerst sessionStorage prüfen
+var saved = sessionStorage.getItem(storageKey);
 if (saved) {
     try { restoreFromGeoJSON(JSON.parse(saved)); } catch(e) {
-        console.warn('Fehler beim Wiederherstellen:', e);
+        console.warn('Fehler beim Wiederherstellen aus sessionStorage:', e);
     }
 }
 
 // -------------------------------------------------------
 // postMessage-Listener:
-// 1) ID von LimeSurvey empfangen -> Karte neu laden
-// 2) Datenempfang von Karte nach LimeSurvey (ignorieren)
+// - type:'setId'      → ID von LimeSurvey empfangen
+// - type:'restoreData'→ gespeicherte GeoJSON-Daten nach
+//                       Zwischenspeichern wiederherstellen
 // -------------------------------------------------------
 window.addEventListener('message', function(event) {
-    if (event.data && typeof event.data === 'object' && event.data.type === 'setId') {
+    if (!event.data || typeof event.data !== 'object') return;
+
+    // ID setzen (beim Laden der Fragegruppe)
+    if (event.data.type === 'setId') {
         var newId = event.data.id;
         if (newId && newId !== karteId) {
             karteId = newId;
             storageKey = 'karteGeoJSON_' + karteId;
             drawnItems.clearLayers();
-            var savedNew = localStorage.getItem(storageKey);
+            var savedNew = sessionStorage.getItem(storageKey);
             if (savedNew) {
                 try { restoreFromGeoJSON(JSON.parse(savedNew)); } catch(e) {}
             }
         }
     }
+
+    // Daten aus LimeSurvey-Textfeld wiederherstellen
+    // (nach "Später fortsetzen" und erneutem Öffnen)
+    if (event.data.type === 'restoreData' && event.data.geojson) {
+        try {
+            var geoData = JSON.parse(event.data.geojson);
+            // Nur wiederherstellen wenn Karte noch leer ist
+            if (drawnItems.getLayers().length === 0) {
+                restoreFromGeoJSON(geoData);
+                sessionStorage.setItem(storageKey, event.data.geojson);
+            }
+        } catch(e) {
+            console.warn('Fehler beim Wiederherstellen aus LimeSurvey:', e);
+        }
+    }
 });
 
 // -------------------------------------------------------
-// Speichern: localStorage + postMessage an LimeSurvey
+// Speichern: sessionStorage + postMessage an LimeSurvey
 // -------------------------------------------------------
-function saveToLocalStorage() {
+function saveToStorage() {
     var geojson = drawnItems.toGeoJSON();
     var jsonStr = JSON.stringify(geojson);
-    localStorage.setItem(storageKey, jsonStr);
+    sessionStorage.setItem(storageKey, jsonStr);
     window.parent.postMessage(jsonStr, '*');
 }
 
-// Nach Bearbeiten/Löschen ebenfalls speichern
-map.on(L.Draw.Event.EDITED,  function() { saveToLocalStorage(); });
-map.on(L.Draw.Event.DELETED, function() { saveToLocalStorage(); });
+map.on(L.Draw.Event.EDITED,  function() { saveToStorage(); });
+map.on(L.Draw.Event.DELETED, function() { saveToStorage(); });
 
 // -------------------------------------------------------
 // Ereignis: neues Element gezeichnet
@@ -652,7 +663,7 @@ function confirmPointWithDetails() {
     drawnItems.addLayer(pendingLayer);
     pendingLayer = null;
     document.getElementById('typeModal').style.display = 'none';
-    saveToLocalStorage();
+    saveToStorage();
 }
 function cancelType() {
     pendingLayer = null;
@@ -720,7 +731,7 @@ function confirmLineWithDetails() {
     selectedLineColor = null;
     selectedLineSolid = false;
     document.getElementById('lineModal').style.display = 'none';
-    saveToLocalStorage();
+    saveToStorage();
 }
 function cancelLine() {
     pendingLayer = null;
@@ -748,7 +759,7 @@ function confirmSignWithDetails() {
     drawnItems.addLayer(pendingLayer);
     pendingLayer = null;
     document.getElementById('signModal').style.display = 'none';
-    saveToLocalStorage();
+    saveToStorage();
 }
 function cancelSign() {
     pendingLayer = null;
