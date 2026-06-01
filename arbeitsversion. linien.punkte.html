@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Karte Radinfrastruktur</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+
+    <style>
+        #map { height: 625px; width: 100%; z-index: 1; position: relative; }
+
+        .leaflet-draw-toolbar a {
+            width: 30px !important;
+            height: 30px !important;
+            position: relative;
+            overflow: visible !important;
+            background-color: #fff;
+        }
+        .leaflet-draw-toolbar a::after {
+            position: absolute;
+            left: 28px;
+            top: -1px;
+            height: 30px;
+            padding: 0 10px 0 5px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-left: none;
+            color: #333;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 30px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            border-radius: 0 4px 4px 0;
+            pointer-events: auto;
+        }
+        .leaflet-draw-draw-polyline::after { content: "Streckenmaßnahme eintragen"; }
+        .leaflet-draw-draw-circlemarker::after { content: "Abstellanlage eintragen"; }
+        .leaflet-draw-draw-marker::after { content: "Beschilderung eintragen"; }
+        .leaflet-draw-edit-edit::after { content: "Bearbeiten"; }
+        .leaflet-draw-edit-remove::after { content: "Löschen"; }
+        .leaflet-draw-actions { left: 160px !important; margin-top: 2px !important; }
+
+        .leaflet-editing-icon {
+            width: 10px !important;
+            height: 10px !important;
+            margin-left: -5px !important;
+            margin-top: -5px !important;
+            background-color: #800020 !important;
+            border: 2px solid white !important;
+            border-radius: 50% !important;
+            box-shadow: 0 0 3px rgba(0,0,0,0.4);
+        }
+
+        #legendPoints {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            max-width: 220px;
+        }
+        #legendLines {
+            position: absolute;
+            bottom: 30px;
+            left: 50px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            max-width: 260px;
+        }
+        .legend-title { margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #333; }
+        .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .legend-dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            margin-right: 8px; flex-shrink: 0;
+            border: 2px solid white;
+            box-shadow: 0 0 3px rgba(0,0,0,0.3);
+        }
+        .legend-dash {
+            width: 28px; height: 4px;
+            margin-right: 8px; flex-shrink: 0;
+            border-radius: 2px;
+            background-image: repeating-linear-gradient(
+                to right,
+                currentColor 0px, currentColor 6px,
+                transparent 6px, transparent 10px
+            );
+        }
+
+        #typeModal, #lineModal, #signModal, #customModal, #errorModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .type-modal-content {
+            background-color: #fff;
+            margin: 3% auto;
+            padding: 25px;
+            border-radius: 10px;
+            width: 380px;
+            max-height: 90vh;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .type-modal-content h4 { margin: 0 0 15px 0; color: #333; font-size: 15px; }
+
+        .type-btn {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            border: 3px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-align: left;
+            transition: opacity 0.15s, border-color 0.15s, box-shadow 0.15s;
+            box-sizing: border-box;
+        }
+        .type-btn:hover { opacity: 0.85; }
+        .type-btn.selected {
+            border-color: white !important;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.5), inset 0 0 0 2px rgba(255,255,255,0.4) !important;
+            opacity: 1 !important;
+            transform: scale(1.02);
+        }
+        .type-btn.selected::after {
+            content: " ✓";
+            margin-left: auto;
+            font-size: 15px;
+        }
+        .type-btn .btn-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: white; margin-right: 10px; flex-shrink: 0;
+        }
+        .type-btn .btn-line {
+            width: 28px; height: 4px; border-radius: 2px;
+            margin-right: 10px; flex-shrink: 0;
+            background-image: repeating-linear-gradient(
+                to right, white 0px, white 6px, transparent 6px, transparent 10px
+            );
+        }
+        .type-btn .btn-solid {
+            width: 28px; height: 4px; border-radius: 2px;
+            margin-right: 10px; flex-shrink: 0;
+            background: white;
+        }
+
+        .section-fields {
+            background: #f7f9fc;
+            border: 1px solid #dce3ef;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .section-fields .field-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            margin-top: 10px;
+            display: block;
+        }
+        .section-fields .field-label:first-child { margin-top: 0; }
+        .section-fields input[type="text"],
+        .section-fields input[type="number"],
+        .section-fields input[type="date"],
+        .section-fields select {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1.5px solid #ccc;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            box-sizing: border-box;
+            transition: border-color 0.15s;
+            background: white;
+        }
+        .section-fields input:focus,
+        .section-fields select:focus { outline: none; border-color: #2c7be5; }
+        .section-fields input.error { border-color: #e74c3c !important; }
+
+        .cost-row {
+            display: flex;
+            gap: 8px;
+        }
+        .cost-row input { flex: 1; }
+        .cost-row select { flex: 1; }
+
+        #sonstigesInput, #pointSonstigesInput { display: none; margin-bottom: 10px; }
+        #sonstigesInput input,
+        #pointSonstigesInput input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid #aaa;
+            border-radius: 6px;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            box-sizing: border-box;
+            margin-top: 6px;
+        }
+        #sonstigesInput input:focus,
+        #pointSonstigesInput input:focus { outline: none; border-color: #2c7be5; }
+
+        .confirm-line-btn {
+            width: 100%;
+            padding: 11px;
+            background: #2c7be5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .confirm-line-btn:hover { background: #1a5ab5; }
+
+        .cancel-btn {
+            width: 100%;
+            padding: 8px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #666;
+        }
+        .cancel-btn:hover { background: #e0e0e0; }
+
+        .modal-divider { border: none; border-top: 1px solid #e0e0e0; margin: 14px 0; }
+
+        #dateError {
+            display: none;
+            color: #e74c3c;
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 5px;
+            margin-bottom: 4px;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .modal-content h4 { margin-top: 0; color: #2c7be5; }
+        .modal-content button {
+            background: #2c7be5; color: white; border: none;
+            padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-top: 15px;
+        }
+
+        .error-modal-content h4 { color: #e74c3c !important; }
+        .error-modal-content button { background: #e74c3c !important; }
+        .error-modal-content button:hover { background: #c0392b !important; }
+
+        .legend-divider {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 6px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div style="position: relative;">
+    <div id="map"></div>
+
+    <div id="legendPoints">
+        <div class="legend-title">Abstellanlagen</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e67e22;"></div>Fahrradständer / Vorderradhalter</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2980b9;"></div>Fahrradanlehnbügel</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#27ae60;"></div>Fahrradbox</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8e44ad;"></div>Fahrradparkhaus</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c0392b;"></div>Doppelstockparker</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#555;"></div>Sonstiges</div>
+    </div>
+
+    <div id="legendLines">
+        <div class="legend-title">Streckenmaßnahmen</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#1a6b3c;"></div>Eigenständiger Radweg</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#2980b9;"></div>Straßenbegleitend (Seitenraum)</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#f39c12;"></div>Straßenbegleitend (Schutzstreifen)</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#e74c3c;"></div>Straßenbegleitend (Radfahrstreifen)</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#8e44ad;"></div>Straßenbegleitend (Protected Bike Lane)</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#16a085;"></div>Fahrradstraße</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#d35400;"></div>Fahrradzone</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#1565c0;"></div>Brücke</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#4a235a;"></div>Unterführung</div>
+        <div class="legend-item"><div class="legend-dash" style="color:#555;"></div>Sonstiges</div>
+    </div>
+</div>
+
+<!-- Modal: Punkte -->
+<div id="typeModal">
+    <div class="type-modal-content">
+        <h4>Welche Art von Abstellanlage?</h4>
+        <button class="type-btn" style="background:#e67e22;" onclick="selectPointType('Fahrradständer / Vorderradhalter','#e67e22',this)"><span class="btn-dot"></span>Fahrradständer / Vorderradhalter</button>
+        <button class="type-btn" style="background:#2980b9;" onclick="selectPointType('Fahrradanlehnbügel','#2980b9',this)"><span class="btn-dot"></span>Fahrradanlehnbügel</button>
+        <button class="type-btn" style="background:#27ae60;" onclick="selectPointType('Fahrradbox','#27ae60',this)"><span class="btn-dot"></span>Fahrradbox</button>
+        <button class="type-btn" style="background:#8e44ad;" onclick="selectPointType('Fahrradparkhaus','#8e44ad',this)"><span class="btn-dot"></span>Fahrradparkhaus</button>
+        <button class="type-btn" style="background:#c0392b;" onclick="selectPointType('Doppelstockparker','#c0392b',this)"><span class="btn-dot"></span>Doppelstockparker</button>
+        <button class="type-btn" style="background:#555;" onclick="selectPointType('Sonstiges','#555',this); showPointSonstigesInput()"><span class="btn-dot"></span>Sonstiges (selbst beschriften)</button>
+
+        <div id="pointSonstigesInput">
+            <input type="text" id="pointSonstigesText" placeholder="Bezeichnung eingeben..." maxlength="80" />
+        </div>
+
+        <hr class="modal-divider">
+        <div class="section-fields">
+            <span class="field-label">Kapazität (Räder, optional)</span>
+            <input type="text" id="pointLabel" placeholder="z. B. 24 Räder" maxlength="60" />
+
+            <span class="field-label">Nutzungskosten in Euro (optional)</span>
+            <div class="cost-row">
+                <input type="number" id="pointCostAmount" placeholder="z. B. 1.50" min="0" step="0.01" />
+                <select id="pointCostUnit">
+                    <option value="">– Einheit –</option>
+                    <option value="pro Tag">pro Tag</option>
+                    <option value="pro Monat">pro Monat</option>
+                    <option value="pro Jahr">pro Jahr</option>
+                </select>
+            </div>
+
+            <span class="field-label">Nutzungsfreigabe</span>
+            <input type="date" id="pointDate" required />
+        </div>
+
+        <button class="confirm-line-btn" onclick="confirmPointWithDetails()">Bestätigen & speichern</button>
+        <button class="cancel-btn" onclick="cancelType()">Abbrechen</button>
+    </div>
+</div>
+
+<!-- Modal: Linien -->
+<div id="lineModal">
+    <div class="type-modal-content">
+        <h4>Welche Art von Streckenmaßnahme?</h4>
+
+        <button class="type-btn" style="background:#1a6b3c;" onclick="selectLineType('Eigenständiger Radweg (z.B. Flussradweg)','#1a6b3c',false,this)"><span class="btn-line"></span>Eigenständiger Radweg (z.B. Flussradweg)</button>
+        <button class="type-btn" style="background:#2980b9;" onclick="selectLineType('Straßenbegleitender Radweg (Seitenraum)','#2980b9',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Seitenraum)</button>
+        <button class="type-btn" style="background:#f39c12;" onclick="selectLineType('Straßenbegleitender Radweg (Schutzstreifen)','#f39c12',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Schutzstreifen)</button>
+        <button class="type-btn" style="background:#e74c3c;" onclick="selectLineType('Straßenbegleitender Radweg (Radfahrstreifen)','#e74c3c',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Radfahrstreifen)</button>
+        <button class="type-btn" style="background:#8e44ad;" onclick="selectLineType('Straßenbegleitender Radweg (Protected Bike Lane)','#8e44ad',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Protected Bike Lane)</button>
+        <button class="type-btn" style="background:#16a085;" onclick="selectLineType('Fahrradstraße','#16a085',false,this)"><span class="btn-line"></span>Fahrradstraße</button>
+        <button class="type-btn" style="background:#d35400;" onclick="selectLineType('Fahrradzone','#d35400',false,this)"><span class="btn-line"></span>Fahrradzone</button>
+        <button class="type-btn" style="background:#1565c0;" onclick="selectLineType('Brücke','#1565c0',false,this)"><span class="btn-line"></span>Brücke</button>
+        <button class="type-btn" style="background:#4a235a;" onclick="selectLineType('Unterführung','#4a235a',false,this)"><span class="btn-line"></span>Unterführung</button>
+        <button class="type-btn" style="background:#555;" onclick="selectLineType('Sonstiges','#555',false,this); showSonstigesInput()"><span class="btn-line"></span>Sonstiges (selbst beschriften)</button>
+
+        <div id="sonstigesInput">
+            <input type="text" id="sonstigesText" placeholder="Bezeichnung eingeben..." maxlength="80" style="margin-top:6px;" />
+        </div>
+
+        <hr class="modal-divider">
+        <div class="section-fields">
+            <span class="field-label">Abschnittsname (optional)</span>
+            <input type="text" id="lineLabel" placeholder="z.B. Abschnitt 1" maxlength="60" />
+
+            <span class="field-label">Baubeginn</span>
+            <input type="date" id="lineDateStart" required oninput="clearDateError()" />
+
+            <span class="field-label">Nutzungsfreigabe</span>
+            <input type="date" id="lineDateEnd" required oninput="clearDateError()" />
+            <div id="dateError">Das Datum der Nutzungsfreigabe muss nach dem Baubeginn liegen.</div>
+        </div>
+
+        <button class="confirm-line-btn" onclick="confirmLineWithDetails()">Bestätigen & speichern</button>
+        <button class="cancel-btn" onclick="cancelLine()">Abbrechen</button>
+    </div>
+</div>
+
+<!-- Modal: Beschilderung -->
+<div id="signModal">
+    <div class="type-modal-content">
+        <h4>Beschilderung eintragen</h4>
+        <div class="section-fields">
+            <span class="field-label">Art der Beschilderung</span>
+            <input type="text" id="signType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
+
+            <span class="field-label">Nutzungsfreigabe</span>
+            <input type="date" id="signDate" required />
+        </div>
+        <button class="confirm-line-btn" onclick="confirmSignWithDetails()">Bestätigen & speichern</button>
+        <button class="cancel-btn" onclick="cancelSign()">Abbrechen</button>
+    </div>
+</div>
+
+<!-- Erfolgs-Modal -->
+<div id="customModal">
+    <div class="modal-content">
+        <h4>Erfolgreich!</h4>
+        <p>Ihre Zeichnungen wurden sicher übertragen.</p>
+        <button onclick="closeModal()">OK</button>
+    </div>
+</div>
+
+<!-- Fehler-Modal -->
+<div id="errorModal">
+    <div class="modal-content error-modal-content">
+        <h4>Hinweis</h4>
+        <p id="errorModalText">Bitte treffen Sie eine Auswahl.</p>
+        <button onclick="closeErrorModal()">OK</button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+<script>
+var map = L.map('map').setView([51.0494, 13.7377], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+var drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+L.drawLocal.draw.toolbar.actions.text = 'Abbrechen';
+L.drawLocal.draw.toolbar.finish.text = 'Fertig';
+L.drawLocal.draw.toolbar.undo.text = 'Rückgängig';
+L.drawLocal.draw.handlers.polyline.tooltip.start = 'Klicken, um die Linie zu beginnen.';
+L.drawLocal.draw.handlers.polyline.tooltip.cont = 'Klicken, um die Linie fortzuführen.';
+L.drawLocal.draw.handlers.polyline.tooltip.end = 'Doppelklicken zum Beenden.';
+L.drawLocal.draw.handlers.circlemarker.tooltip.start = 'Klicken, um eine Abstellanlage zu setzen.';
+L.drawLocal.draw.handlers.marker.tooltip.start = 'Klicken, um eine Beschilderung zu setzen.';
+L.drawLocal.draw.toolbar.buttons.polyline = 'Streckenmaßnahme eintragen';
+L.drawLocal.draw.toolbar.buttons.circlemarker = 'Abstellanlage eintragen';
+L.drawLocal.draw.toolbar.buttons.marker = 'Beschilderung eintragen';
+L.drawLocal.edit.toolbar.actions.save.text = 'Speichern';
+L.drawLocal.edit.toolbar.actions.cancel.text = 'Abbrechen';
+L.drawLocal.edit.toolbar.actions.clearAll.text = 'Alle löschen';
+L.drawLocal.edit.handlers.edit.tooltip.text = 'Punkte ziehen zum Verschieben.';
+L.drawLocal.edit.handlers.edit.tooltip.subtext = 'Abbrechen klicken, um Änderungen zu verwerfen.';
+L.drawLocal.edit.handlers.remove.tooltip.text = 'Klicken Sie auf ein Element zum Löschen.';
+
+var drawControl = new L.Control.Draw({
+    edit: { featureGroup: drawnItems },
+    draw: {
+        polyline: { shapeOptions: { color: '#800020', weight: 5, opacity: 1, dashArray: '8, 6' } },
+        circlemarker: { color: '#800020', fillColor: '#800020', fillOpacity: 1, radius: 8 },
+        marker: true,
+        polygon: false, rectangle: false, circle: false
+    }
+});
+map.addControl(drawControl);
+
+var pendingLayer = null;
+var selectedLineType = null;
+var selectedLineColor = null;
+var selectedLineSolid = false;
+var selectedPointType = null;
+var selectedPointColor = null;
+
+// Hilfsfunktion: GeoJSON senden + Erfolgs-Modal zeigen
+function sendGeoJSONAndShowSuccess() {
+    var geojson = drawnItems.toGeoJSON();
+    if (window.parent) {
+        window.parent.postMessage(JSON.stringify(geojson), "*");
+    }
+    document.getElementById("customModal").style.display = "block";
+    // Modal nach 1,5 Sek. automatisch schließen
+    setTimeout(function() {
+        document.getElementById("customModal").style.display = "none";
+    }, 1500);
+}
+
+map.on(L.Draw.Event.CREATED, function(event) {
+    pendingLayer = event.layer;
+
+    if (event.layerType === 'circlemarker') {
+        selectedPointType = null;
+        selectedPointColor = null;
+        document.getElementById('pointLabel').value = '';
+        document.getElementById('pointCostAmount').value = '';
+        document.getElementById('pointCostUnit').value = '';
+        document.getElementById('pointDate').value = '';
+        document.getElementById('pointSonstigesInput').style.display = 'none';
+        document.getElementById('pointSonstigesText').value = '';
+        document.querySelectorAll('#typeModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
+        document.getElementById('typeModal').style.display = 'block';
+
+    } else if (event.layerType === 'polyline') {
+        selectedLineType = null;
+        selectedLineColor = null;
+        selectedLineSolid = false;
+        document.getElementById('sonstigesInput').style.display = 'none';
+        document.getElementById('sonstigesText').value = '';
+        document.getElementById('lineLabel').value = '';
+        document.getElementById('lineDateStart').value = '';
+        document.getElementById('lineDateEnd').value = '';
+        document.getElementById('lineDateStart').classList.remove('error');
+        document.getElementById('lineDateEnd').classList.remove('error');
+        document.getElementById('dateError').style.display = 'none';
+        document.querySelectorAll('#lineModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
+        document.getElementById('lineModal').style.display = 'block';
+
+    } else if (event.layerType === 'marker') {
+        document.getElementById('signType').value = '';
+        document.getElementById('signDate').value = '';
+        document.getElementById('signModal').style.display = 'block';
+    }
+});
+
+function showErrorModal(message) {
+    document.getElementById('errorModalText').innerText = message;
+    document.getElementById('errorModal').style.display = 'block';
+}
+function closeErrorModal() {
+    document.getElementById('errorModal').style.display = 'none';
+}
+
+// --- PUNKTE ---
+function selectPointType(typeName, color, btn) {
+    selectedPointType = typeName;
+    selectedPointColor = color;
+    document.querySelectorAll('#typeModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+}
+
+function showPointSonstigesInput() {
+    document.getElementById('pointSonstigesInput').style.display = 'block';
+    document.getElementById('pointSonstigesText').focus();
+}
+
+function confirmPointWithDetails() {
+    if (!pendingLayer) return;
+
+    var typeName = selectedPointType;
+    var color = selectedPointColor;
+
+    if (!typeName) {
+        showErrorModal('Bitte zuerst eine Art von Abstellanlage auswählen.');
+        return;
+    }
+
+    if (typeName === 'Sonstiges') {
+        var pText = document.getElementById('pointSonstigesText').value.trim();
+        if (!pText) { showErrorModal('Bitte eine Bezeichnung für "Sonstiges" eingeben.'); return; }
+        typeName = 'Sonstiges: ' + pText;
+    }
+
+    var label      = document.getElementById('pointLabel').value.trim();
+    var costAmount = document.getElementById('pointCostAmount').value.trim();
+    var costUnit   = document.getElementById('pointCostUnit').value;
+    var date       = document.getElementById('pointDate').value;
+
+    if (costAmount && !costUnit) {
+        showErrorModal('Bitte eine Einheit für die Nutzungskosten auswählen (pro Tag / Monat / Jahr).');
+        return;
+    }
+
+    if (!date) {
+        showErrorModal('Bitte ein Datum für die Nutzungsfreigabe eingeben.');
+        return;
+    }
+
+    pendingLayer.setStyle({ color: color, fillColor: color, fillOpacity: 1 });
+    pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
+    pendingLayer.feature.properties.typ = typeName;
+    pendingLayer.feature.properties.kategorie = 'Abstellanlage';
+    if (label) pendingLayer.feature.properties.kapazitaet = label;
+    if (costAmount && costUnit) {
+        pendingLayer.feature.properties.nutzungskosten = costAmount + ' € ' + costUnit;
+    }
+    pendingLayer.feature.properties.nutzungsfreigabe = date;
+
+    var popupHtml = '<strong>' + typeName + '</strong>';
+    if (label) popupHtml += '<br>Kapazität: ' + label;
+    if (costAmount && costUnit) popupHtml += '<br>Nutzungskosten: ' + costAmount + ' € ' + costUnit;
+    popupHtml += '<br>Nutzungsfreigabe: ' + date;
+
+    pendingLayer.bindPopup(popupHtml);
+    drawnItems.addLayer(pendingLayer);
+    pendingLayer = null;
+
+    document.getElementById('typeModal').style.display = 'none';
+
+    // → AUTOMATISCH SPEICHERN
+    sendGeoJSONAndShowSuccess();
+}
+
+function cancelType() {
+    pendingLayer = null;
+    document.getElementById('typeModal').style.display = 'none';
+    document.getElementById('pointSonstigesInput').style.display = 'none';
+    document.getElementById('pointSonstigesText').value = '';
+}
+
+// --- LINIEN ---
+function selectLineType(typeName, color, solid, btn) {
+    selectedLineType = typeName;
+    selectedLineColor = color;
+    selectedLineSolid = solid;
+    document.querySelectorAll('#lineModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+}
+
+function showSonstigesInput() {
+    document.getElementById('sonstigesInput').style.display = 'block';
+    document.getElementById('sonstigesText').focus();
+}
+
+function clearDateError() {
+    document.getElementById('dateError').style.display = 'none';
+    document.getElementById('lineDateStart').classList.remove('error');
+    document.getElementById('lineDateEnd').classList.remove('error');
+}
+
+function confirmLineWithDetails() {
+    if (!pendingLayer) return;
+
+    var typeName = selectedLineType;
+    var color = selectedLineColor;
+
+    if (!typeName) {
+        showErrorModal('Bitte zuerst eine Art von Streckenmaßnahme auswählen.');
+        return;
+    }
+
+    if (typeName === 'Sonstiges') {
+        var sText = document.getElementById('sonstigesText').value.trim();
+        if (!sText) { showErrorModal('Bitte eine Bezeichnung für "Sonstiges" eingeben.'); return; }
+        typeName = 'Sonstiges: ' + sText;
+    }
+
+    var label     = document.getElementById('lineLabel').value.trim();
+    var dateStart = document.getElementById('lineDateStart').value;
+    var dateEnd   = document.getElementById('lineDateEnd').value;
+
+    if (!dateStart || !dateEnd) {
+        showErrorModal('Bitte Baubeginn und Nutzungsfreigabe eingeben.');
+        return;
+    }
+
+    if (dateEnd <= dateStart) {
+        document.getElementById('dateError').style.display = 'block';
+        document.getElementById('lineDateStart').classList.add('error');
+        document.getElementById('lineDateEnd').classList.add('error');
+        document.getElementById('lineDateEnd').focus();
+        return;
+    }
+
+    var lineStyle = selectedLineSolid
+        ? { color: color, weight: 5, opacity: 1 }
+        : { color: color, weight: 5, opacity: 1, dashArray: '8, 6' };
+
+    pendingLayer.setStyle(lineStyle);
+    pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
+    pendingLayer.feature.properties.typ = typeName;
+    pendingLayer.feature.properties.kategorie = selectedLineSolid ? 'Sonderbauwerk' : 'Streckenmaßnahme';
+    if (label) pendingLayer.feature.properties.abschnitt = label;
+    pendingLayer.feature.properties.baubeginn = dateStart;
+    pendingLayer.feature.properties.nutzungsfreigabe = dateEnd;
+
+    var popupHtml = '<strong>' + typeName + '</strong>';
+    if (label) popupHtml += '<br>Abschnitt: ' + label;
+    popupHtml += '<br>Baubeginn: ' + dateStart;
+    popupHtml += '<br>Nutzungsfreigabe: ' + dateEnd;
+
+    pendingLayer.bindPopup(popupHtml);
+    drawnItems.addLayer(pendingLayer);
+    pendingLayer = null;
+    selectedLineType = null;
+    selectedLineColor = null;
+    selectedLineSolid = false;
+
+    document.getElementById('lineModal').style.display = 'none';
+
+    // → AUTOMATISCH SPEICHERN
+    sendGeoJSONAndShowSuccess();
+}
+
+function cancelLine() {
+    pendingLayer = null;
+    selectedLineType = null;
+    selectedLineColor = null;
+    selectedLineSolid = false;
+    document.getElementById('lineModal').style.display = 'none';
+    document.getElementById('sonstigesInput').style.display = 'none';
+    document.getElementById('sonstigesText').value = '';
+}
+
+// --- BESCHILDERUNG ---
+function confirmSignWithDetails() {
+    if (!pendingLayer) return;
+
+    var signType = document.getElementById('signType').value.trim();
+    var date     = document.getElementById('signDate').value;
+
+    if (!signType) { showErrorModal('Bitte die Art der Beschilderung eingeben.'); return; }
+    if (!date) { showErrorModal('Bitte ein Datum für die Nutzungsfreigabe der Beschilderung eingeben.'); return; }
+
+    pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
+    pendingLayer.feature.properties.typ = 'Beschilderung';
+    pendingLayer.feature.properties.art = signType;
+    pendingLayer.feature.properties.kategorie = 'Beschilderung';
+    pendingLayer.feature.properties.nutzungsfreigabe = date;
+
+    pendingLayer.bindPopup('<strong>Beschilderung</strong><br>Art: ' + signType + '<br>Nutzungsfreigabe: ' + date);
+    drawnItems.addLayer(pendingLayer);
+    pendingLayer = null;
+
+    document.getElementById('signModal').style.display = 'none';
+
+    // → AUTOMATISCH SPEICHERN
+    sendGeoJSONAndShowSuccess();
+}
+
+function cancelSign() {
+    pendingLayer = null;
+    document.getElementById('signModal').style.display = 'none';
+}
+
+map.on(L.Draw.Event.EDITSTART, function() {
+    drawnItems.eachLayer(function(layer) {
+        if (layer.editing && layer instanceof L.Polyline) {
+            layer.editing._showMiddleMarkers = function() { return; };
+            if (layer.editing._updateMarkers) layer.editing._updateMarkers();
+        }
+    });
+});
+
+function closeModal() {
+    document.getElementById("customModal").style.display = "none";
+}
+</script>
+</body>
+</html>
