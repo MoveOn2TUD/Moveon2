@@ -11,7 +11,6 @@
     <style>
         #map { height: 625px; width: 100%; z-index: 1; position: relative; }
 
-
         .leaflet-draw-toolbar a {
             width: 30px !important;
             height: 30px !important;
@@ -92,16 +91,6 @@
             margin-right: 8px; flex-shrink: 0;
             border: 2px solid white;
             box-shadow: 0 0 3px rgba(0,0,0,0.3);
-        }
-        .legend-dash {
-            width: 28px; height: 4px;
-            margin-right: 8px; flex-shrink: 0;
-            border-radius: 2px;
-            background-image: repeating-linear-gradient(
-                to right,
-                currentColor 0px, currentColor 6px,
-                transparent 6px, transparent 10px
-            );
         }
         .legend-dash {
             width: 28px; height: 4px;
@@ -210,10 +199,7 @@
         .section-fields select:focus { outline: none; border-color: #2c7be5; }
         .section-fields input.error { border-color: #e74c3c !important; }
 
-        .cost-row {
-            display: flex;
-            gap: 8px;
-        }
+        .cost-row { display: flex; gap: 8px; }
         .cost-row input { flex: 1; }
         .cost-row select { flex: 1; }
 
@@ -286,16 +272,11 @@
             background: #2c7be5; color: white; border: none;
             padding: 8px 20px; border-radius: 4px; cursor: pointer; margin-top: 15px;
         }
-
         .error-modal-content h4 { color: #e74c3c !important; }
         .error-modal-content button { background: #e74c3c !important; }
         .error-modal-content button:hover { background: #c0392b !important; }
 
-        .legend-divider {
-            border: none;
-            border-top: 1px solid #e0e0e0;
-            margin: 6px 0;
-        }
+        .legend-divider { border: none; border-top: 1px solid #e0e0e0; margin: 6px 0; }
     </style>
 </head>
 <body>
@@ -328,7 +309,6 @@
     </div>
 </div>
 
-
 <!-- Modal: Punkte -->
 <div id="typeModal">
     <div class="type-modal-content">
@@ -339,16 +319,13 @@
         <button class="type-btn" style="background:#8e44ad;" onclick="selectPointType('Fahrradparkhaus','#8e44ad',this)"><span class="btn-dot"></span>Fahrradparkhaus</button>
         <button class="type-btn" style="background:#c0392b;" onclick="selectPointType('Doppelstockparker','#c0392b',this)"><span class="btn-dot"></span>Doppelstockparker</button>
         <button class="type-btn" style="background:#555;" onclick="selectPointType('Sonstiges','#555',this); showPointSonstigesInput()"><span class="btn-dot"></span>Sonstiges (selbst beschriften)</button>
-
         <div id="pointSonstigesInput">
             <input type="text" id="pointSonstigesText" placeholder="Bezeichnung eingeben..." maxlength="80" />
         </div>
-
         <hr class="modal-divider">
         <div class="section-fields">
             <span class="field-label">Kapazität (Räder, optional)</span>
             <input type="text" id="pointLabel" placeholder="z. B. 24 Räder" maxlength="60" />
-
             <span class="field-label">Nutzungskosten in Euro (optional)</span>
             <div class="cost-row">
                 <input type="number" id="pointCostAmount" placeholder="z. B. 1.50" min="0" step="0.01" />
@@ -359,11 +336,9 @@
                     <option value="pro Jahr">pro Jahr</option>
                 </select>
             </div>
-
             <span class="field-label">Nutzungsfreigabe</span>
             <input type="date" id="pointDate" required />
         </div>
-
         <button class="confirm-line-btn" onclick="confirmPointWithDetails()">Bestätigen & speichern</button>
         <button class="cancel-btn" onclick="cancelType()">Abbrechen</button>
     </div>
@@ -373,7 +348,6 @@
 <div id="lineModal">
     <div class="type-modal-content">
         <h4>Welche Art von Streckenmaßnahme?</h4>
-
         <button class="type-btn" style="background:#1a6b3c;" onclick="selectLineType('Eigenständiger Radweg (z.B. Flussradweg)','#1a6b3c',false,this)"><span class="btn-line"></span>Eigenständiger Radweg (z.B. Flussradweg)</button>
         <button class="type-btn" style="background:#2980b9;" onclick="selectLineType('Straßenbegleitender Radweg (Seitenraum)','#2980b9',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Seitenraum)</button>
         <button class="type-btn" style="background:#f39c12;" onclick="selectLineType('Straßenbegleitender Radweg (Schutzstreifen)','#f39c12',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Schutzstreifen)</button>
@@ -384,24 +358,19 @@
         <button class="type-btn" style="background:#1565c0;" onclick="selectLineType('Brücke','#1565c0',false,this)"><span class="btn-line"></span>Brücke</button>
         <button class="type-btn" style="background:#4a235a;" onclick="selectLineType('Unterführung','#4a235a',false,this)"><span class="btn-line"></span>Unterführung</button>
         <button class="type-btn" style="background:#555;" onclick="selectLineType('Sonstiges','#555',false,this); showSonstigesInput()"><span class="btn-line"></span>Sonstiges (selbst beschriften)</button>
-
         <div id="sonstigesInput">
             <input type="text" id="sonstigesText" placeholder="Bezeichnung eingeben..." maxlength="80" style="margin-top:6px;" />
         </div>
-
         <hr class="modal-divider">
         <div class="section-fields">
             <span class="field-label">Abschnittsname (optional)</span>
             <input type="text" id="lineLabel" placeholder="z.B. Abschnitt 1" maxlength="60" />
-
             <span class="field-label">Baubeginn</span>
             <input type="date" id="lineDateStart" required oninput="clearDateError()" />
-
             <span class="field-label">Nutzungsfreigabe</span>
             <input type="date" id="lineDateEnd" required oninput="clearDateError()" />
             <div id="dateError">Das Datum der Nutzungsfreigabe muss nach dem Baubeginn liegen.</div>
         </div>
-
         <button class="confirm-line-btn" onclick="confirmLineWithDetails()">Bestätigen & speichern</button>
         <button class="cancel-btn" onclick="cancelLine()">Abbrechen</button>
     </div>
@@ -414,7 +383,6 @@
         <div class="section-fields">
             <span class="field-label">Art der Beschilderung</span>
             <input type="text" id="signType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
-
             <span class="field-label">Nutzungsfreigabe</span>
             <input type="date" id="signDate" required />
         </div>
@@ -422,7 +390,6 @@
         <button class="cancel-btn" onclick="cancelSign()">Abbrechen</button>
     </div>
 </div>
-
 
 <!-- Fehler-Modal -->
 <div id="errorModal">
@@ -479,11 +446,6 @@ var selectedLineSolid = false;
 var selectedPointType = null;
 var selectedPointColor = null;
 
-// Eindeutigen Schlüssel aus URL-Parameter lesen (?id=massnahme1 usw.)
-var urlParams = new URLSearchParams(window.location.search);
-var karteId = urlParams.get('id') || 'default';
-var storageKey = 'karteGeoJSON_' + karteId;
-
 // Farbzuordnungen
 var pointColorMap = {
     'Fahrradständer / Vorderradhalter': '#e67e22',
@@ -505,63 +467,103 @@ var lineColorMap = {
 };
 
 // -------------------------------------------------------
-// Gespeicherte Zeichnungen beim Laden wiederherstellen
+// Storage-Schlüssel: zunächst aus URL-Parameter lesen,
+// kann später per postMessage überschrieben werden
 // -------------------------------------------------------
+var urlParams = new URLSearchParams(window.location.search);
+var karteId = urlParams.get('id') || 'default';
+var storageKey = 'karteGeoJSON_' + karteId;
+
+// -------------------------------------------------------
+// Zeichnungen aus GeoJSON wiederherstellen (wiederverwendbar)
+// -------------------------------------------------------
+function restoreFromGeoJSON(geoData) {
+    L.geoJSON(geoData, {
+        pointToLayer: function(feature, latlng) {
+            var props = feature.properties || {};
+            if (props.kategorie === 'Beschilderung') {
+                return L.marker(latlng);
+            }
+            var color = '#555';
+            if (props.typ && pointColorMap[props.typ]) {
+                color = pointColorMap[props.typ];
+            } else if (props.typ && props.typ.startsWith('Sonstiges')) {
+                color = '#555';
+            }
+            return L.circleMarker(latlng, {
+                color: color, fillColor: color, fillOpacity: 1, radius: 8
+            });
+        },
+        style: function(feature) {
+            var props = feature.properties || {};
+            var color = '#555';
+            if (props.typ && lineColorMap[props.typ]) {
+                color = lineColorMap[props.typ];
+            } else if (props.typ && props.typ.startsWith('Sonstiges')) {
+                color = '#555';
+            }
+            var solid = (props.kategorie === 'Sonderbauwerk');
+            return { color: color, weight: 5, opacity: 1, dashArray: solid ? null : '8, 6' };
+        },
+        onEachFeature: function(feature, layer) {
+            var props = feature.properties || {};
+            var html = '<strong>' + (props.typ || '') + '</strong>';
+            if (props.abschnitt)        html += '<br>Abschnitt: '        + props.abschnitt;
+            if (props.kapazitaet)       html += '<br>Kapazität: '        + props.kapazitaet;
+            if (props.nutzungskosten)   html += '<br>Nutzungskosten: '   + props.nutzungskosten;
+            if (props.art)              html += '<br>Art: '              + props.art;
+            if (props.baubeginn)        html += '<br>Baubeginn: '        + props.baubeginn;
+            if (props.nutzungsfreigabe) html += '<br>Nutzungsfreigabe: ' + props.nutzungsfreigabe;
+            layer.bindPopup(html);
+            drawnItems.addLayer(layer);
+        }
+    });
+}
+
+// Beim ersten Laden: gespeicherte Zeichnungen wiederherstellen
 var saved = localStorage.getItem(storageKey);
 if (saved) {
-    try {
-        var geoData = JSON.parse(saved);
-        L.geoJSON(geoData, {
-            pointToLayer: function(feature, latlng) {
-                var props = feature.properties || {};
-                if (props.kategorie === 'Beschilderung') {
-                    return L.marker(latlng);
-                }
-                var color = '#555';
-                if (props.typ && pointColorMap[props.typ]) {
-                    color = pointColorMap[props.typ];
-                } else if (props.typ && props.typ.startsWith('Sonstiges')) {
-                    color = '#555';
-                }
-                return L.circleMarker(latlng, {
-                    color: color, fillColor: color,
-                    fillOpacity: 1, radius: 8
-                });
-            },
-            style: function(feature) {
-                var props = feature.properties || {};
-                var color = '#555';
-                if (props.typ && lineColorMap[props.typ]) {
-                    color = lineColorMap[props.typ];
-                } else if (props.typ && props.typ.startsWith('Sonstiges')) {
-                    color = '#555';
-                }
-                var solid = (props.kategorie === 'Sonderbauwerk');
-                return {
-                    color: color, weight: 5, opacity: 1,
-                    dashArray: solid ? null : '8, 6'
-                };
-            },
-            onEachFeature: function(feature, layer) {
-                var props = feature.properties || {};
-                var html = '<strong>' + (props.typ || '') + '</strong>';
-                if (props.abschnitt)        html += '<br>Abschnitt: '       + props.abschnitt;
-                if (props.kapazitaet)       html += '<br>Kapazität: '       + props.kapazitaet;
-                if (props.nutzungskosten)   html += '<br>Nutzungskosten: '  + props.nutzungskosten;
-                if (props.art)              html += '<br>Art: '             + props.art;
-                if (props.baubeginn)        html += '<br>Baubeginn: '       + props.baubeginn;
-                if (props.nutzungsfreigabe) html += '<br>Nutzungsfreigabe: '+ props.nutzungsfreigabe;
-                layer.bindPopup(html);
-                drawnItems.addLayer(layer);
-            }
-        });
-    } catch(e) {
-        console.warn('Fehler beim Wiederherstellen der Karte:', e);
+    try { restoreFromGeoJSON(JSON.parse(saved)); } catch(e) {
+        console.warn('Fehler beim Wiederherstellen:', e);
     }
 }
 
 // -------------------------------------------------------
-// Ereignisse
+// postMessage-Listener:
+// 1) ID von LimeSurvey empfangen -> Karte neu laden
+// 2) Datenempfang von Karte nach LimeSurvey (ignorieren)
+// -------------------------------------------------------
+window.addEventListener('message', function(event) {
+    if (event.data && typeof event.data === 'object' && event.data.type === 'setId') {
+        var newId = event.data.id;
+        if (newId && newId !== karteId) {
+            karteId = newId;
+            storageKey = 'karteGeoJSON_' + karteId;
+            drawnItems.clearLayers();
+            var savedNew = localStorage.getItem(storageKey);
+            if (savedNew) {
+                try { restoreFromGeoJSON(JSON.parse(savedNew)); } catch(e) {}
+            }
+        }
+    }
+});
+
+// -------------------------------------------------------
+// Speichern: localStorage + postMessage an LimeSurvey
+// -------------------------------------------------------
+function saveToLocalStorage() {
+    var geojson = drawnItems.toGeoJSON();
+    var jsonStr = JSON.stringify(geojson);
+    localStorage.setItem(storageKey, jsonStr);
+    window.parent.postMessage(jsonStr, '*');
+}
+
+// Nach Bearbeiten/Löschen ebenfalls speichern
+map.on(L.Draw.Event.EDITED,  function() { saveToLocalStorage(); });
+map.on(L.Draw.Event.DELETED, function() { saveToLocalStorage(); });
+
+// -------------------------------------------------------
+// Ereignis: neues Element gezeichnet
 // -------------------------------------------------------
 map.on(L.Draw.Event.CREATED, function(event) {
     pendingLayer = event.layer;
@@ -600,17 +602,6 @@ map.on(L.Draw.Event.CREATED, function(event) {
     }
 });
 
-// Nach jedem Bearbeiten/Löschen auch localStorage aktualisieren
-map.on(L.Draw.Event.EDITED, function() { saveToLocalStorage(); });
-map.on(L.Draw.Event.DELETED, function() { saveToLocalStorage(); });
-
-function saveToLocalStorage() {
-    var geojson = drawnItems.toGeoJSON();
-    var jsonStr = JSON.stringify(geojson);
-    localStorage.setItem(storageKey, jsonStr);
-    window.parent.postMessage(jsonStr, "*");
-}
-
 function showErrorModal(message) {
     document.getElementById('errorModalText').innerText = message;
     document.getElementById('errorModal').style.display = 'block';
@@ -626,66 +617,43 @@ function selectPointType(typeName, color, btn) {
     document.querySelectorAll('#typeModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
     btn.classList.add('selected');
 }
-
 function showPointSonstigesInput() {
     document.getElementById('pointSonstigesInput').style.display = 'block';
     document.getElementById('pointSonstigesText').focus();
 }
-
 function confirmPointWithDetails() {
     if (!pendingLayer) return;
-
     var typeName = selectedPointType;
     var color = selectedPointColor;
-
-    if (!typeName) {
-        showErrorModal('Bitte zuerst eine Art von Abstellanlage auswählen.');
-        return;
-    }
-
+    if (!typeName) { showErrorModal('Bitte zuerst eine Art von Abstellanlage auswählen.'); return; }
     if (typeName === 'Sonstiges') {
         var pText = document.getElementById('pointSonstigesText').value.trim();
         if (!pText) { showErrorModal('Bitte eine Bezeichnung für "Sonstiges" eingeben.'); return; }
         typeName = 'Sonstiges: ' + pText;
     }
-
     var label      = document.getElementById('pointLabel').value.trim();
     var costAmount = document.getElementById('pointCostAmount').value.trim();
     var costUnit   = document.getElementById('pointCostUnit').value;
     var date       = document.getElementById('pointDate').value;
-
-    if (costAmount && !costUnit) {
-        showErrorModal('Bitte eine Einheit für die Nutzungskosten auswählen (pro Tag / Monat / Jahr).');
-        return;
-    }
-
-    if (!date) {
-        showErrorModal('Bitte ein Datum für die Nutzungsfreigabe eingeben.');
-        return;
-    }
-
+    if (costAmount && !costUnit) { showErrorModal('Bitte eine Einheit für die Nutzungskosten auswählen (pro Tag / Monat / Jahr).'); return; }
+    if (!date) { showErrorModal('Bitte ein Datum für die Nutzungsfreigabe eingeben.'); return; }
     pendingLayer.setStyle({ color: color, fillColor: color, fillOpacity: 1 });
     pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
     pendingLayer.feature.properties.typ = typeName;
     pendingLayer.feature.properties.kategorie = 'Abstellanlage';
     if (label) pendingLayer.feature.properties.kapazitaet = label;
-    if (costAmount && costUnit) {
-        pendingLayer.feature.properties.nutzungskosten = costAmount + ' € ' + costUnit;
-    }
+    if (costAmount && costUnit) pendingLayer.feature.properties.nutzungskosten = costAmount + ' € ' + costUnit;
     pendingLayer.feature.properties.nutzungsfreigabe = date;
-
     var popupHtml = '<strong>' + typeName + '</strong>';
     if (label) popupHtml += '<br>Kapazität: ' + label;
     if (costAmount && costUnit) popupHtml += '<br>Nutzungskosten: ' + costAmount + ' € ' + costUnit;
     popupHtml += '<br>Nutzungsfreigabe: ' + date;
-
     pendingLayer.bindPopup(popupHtml);
     drawnItems.addLayer(pendingLayer);
     pendingLayer = null;
     document.getElementById('typeModal').style.display = 'none';
     saveToLocalStorage();
 }
-
 function cancelType() {
     pendingLayer = null;
     document.getElementById('typeModal').style.display = 'none';
@@ -701,44 +669,29 @@ function selectLineType(typeName, color, solid, btn) {
     document.querySelectorAll('#lineModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
     btn.classList.add('selected');
 }
-
 function showSonstigesInput() {
     document.getElementById('sonstigesInput').style.display = 'block';
     document.getElementById('sonstigesText').focus();
 }
-
 function clearDateError() {
     document.getElementById('dateError').style.display = 'none';
     document.getElementById('lineDateStart').classList.remove('error');
     document.getElementById('lineDateEnd').classList.remove('error');
 }
-
 function confirmLineWithDetails() {
     if (!pendingLayer) return;
-
     var typeName = selectedLineType;
     var color = selectedLineColor;
-
-    if (!typeName) {
-        showErrorModal('Bitte zuerst eine Art von Streckenmaßnahme auswählen.');
-        return;
-    }
-
+    if (!typeName) { showErrorModal('Bitte zuerst eine Art von Streckenmaßnahme auswählen.'); return; }
     if (typeName === 'Sonstiges') {
         var sText = document.getElementById('sonstigesText').value.trim();
         if (!sText) { showErrorModal('Bitte eine Bezeichnung für "Sonstiges" eingeben.'); return; }
         typeName = 'Sonstiges: ' + sText;
     }
-
     var label     = document.getElementById('lineLabel').value.trim();
     var dateStart = document.getElementById('lineDateStart').value;
     var dateEnd   = document.getElementById('lineDateEnd').value;
-
-    if (!dateStart || !dateEnd) {
-        showErrorModal('Bitte Baubeginn und Nutzungsfreigabe eingeben.');
-        return;
-    }
-
+    if (!dateStart || !dateEnd) { showErrorModal('Bitte Baubeginn und Nutzungsfreigabe eingeben.'); return; }
     if (dateEnd <= dateStart) {
         document.getElementById('dateError').style.display = 'block';
         document.getElementById('lineDateStart').classList.add('error');
@@ -746,11 +699,9 @@ function confirmLineWithDetails() {
         document.getElementById('lineDateEnd').focus();
         return;
     }
-
     var lineStyle = selectedLineSolid
         ? { color: color, weight: 5, opacity: 1 }
         : { color: color, weight: 5, opacity: 1, dashArray: '8, 6' };
-
     pendingLayer.setStyle(lineStyle);
     pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
     pendingLayer.feature.properties.typ = typeName;
@@ -758,12 +709,10 @@ function confirmLineWithDetails() {
     if (label) pendingLayer.feature.properties.abschnitt = label;
     pendingLayer.feature.properties.baubeginn = dateStart;
     pendingLayer.feature.properties.nutzungsfreigabe = dateEnd;
-
     var popupHtml = '<strong>' + typeName + '</strong>';
     if (label) popupHtml += '<br>Abschnitt: ' + label;
     popupHtml += '<br>Baubeginn: ' + dateStart;
     popupHtml += '<br>Nutzungsfreigabe: ' + dateEnd;
-
     pendingLayer.bindPopup(popupHtml);
     drawnItems.addLayer(pendingLayer);
     pendingLayer = null;
@@ -773,7 +722,6 @@ function confirmLineWithDetails() {
     document.getElementById('lineModal').style.display = 'none';
     saveToLocalStorage();
 }
-
 function cancelLine() {
     pendingLayer = null;
     selectedLineType = null;
@@ -787,26 +735,21 @@ function cancelLine() {
 // --- BESCHILDERUNG ---
 function confirmSignWithDetails() {
     if (!pendingLayer) return;
-
     var signType = document.getElementById('signType').value.trim();
     var date     = document.getElementById('signDate').value;
-
     if (!signType) { showErrorModal('Bitte die Art der Beschilderung eingeben.'); return; }
     if (!date) { showErrorModal('Bitte ein Datum für die Nutzungsfreigabe der Beschilderung eingeben.'); return; }
-
     pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
     pendingLayer.feature.properties.typ = 'Beschilderung';
     pendingLayer.feature.properties.art = signType;
     pendingLayer.feature.properties.kategorie = 'Beschilderung';
     pendingLayer.feature.properties.nutzungsfreigabe = date;
-
     pendingLayer.bindPopup('<strong>Beschilderung</strong><br>Art: ' + signType + '<br>Nutzungsfreigabe: ' + date);
     drawnItems.addLayer(pendingLayer);
     pendingLayer = null;
     document.getElementById('signModal').style.display = 'none';
     saveToLocalStorage();
 }
-
 function cancelSign() {
     pendingLayer = null;
     document.getElementById('signModal').style.display = 'none';
@@ -820,9 +763,6 @@ map.on(L.Draw.Event.EDITSTART, function() {
         }
     });
 });
-
-
-
 </script>
 </body>
 </html>
