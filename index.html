@@ -479,6 +479,11 @@ var selectedLineSolid = false;
 var selectedPointType = null;
 var selectedPointColor = null;
 
+// Eindeutigen Schlüssel aus URL-Parameter lesen (?id=massnahme1 usw.)
+var urlParams = new URLSearchParams(window.location.search);
+var karteId = urlParams.get('id') || 'default';
+var storageKey = 'karteGeoJSON_' + karteId;
+
 // Farbzuordnungen
 var pointColorMap = {
     'Fahrradständer / Vorderradhalter': '#e67e22',
@@ -502,7 +507,7 @@ var lineColorMap = {
 // -------------------------------------------------------
 // Gespeicherte Zeichnungen beim Laden wiederherstellen
 // -------------------------------------------------------
-var saved = localStorage.getItem('karteGeoJSON');
+var saved = localStorage.getItem(storageKey);
 if (saved) {
     try {
         var geoData = JSON.parse(saved);
@@ -602,7 +607,7 @@ map.on(L.Draw.Event.DELETED, function() { saveToLocalStorage(); });
 function saveToLocalStorage() {
     var geojson = drawnItems.toGeoJSON();
     var jsonStr = JSON.stringify(geojson);
-    localStorage.setItem('karteGeoJSON', jsonStr);
+    localStorage.setItem(storageKey, jsonStr);
     window.parent.postMessage(jsonStr, "*");
 }
 
