@@ -667,6 +667,8 @@ map.on('moveend', function() {
 });
 
 window.addEventListener('message', function(event) {
+    console.log('Message in Karte empfangen:', JSON.stringify(event.data));
+    
     if (!event.data || typeof event.data !== 'object') return;
 
     if (event.data.type === 'setId') {
