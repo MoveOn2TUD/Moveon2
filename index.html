@@ -192,7 +192,6 @@
                 to right, currentColor 0px, currentColor 6px, transparent 6px, transparent 10px
             );
         }
-        .legend-dash { width: 28px; height: 4px; margin-right: 8px; flex-shrink: 0; border-radius: 2px; }
         .legend-divider { border: none; border-top: 1px solid #e0e0e0; margin: 6px 0; }
 
         #typeModal, #lineModal, #signModal, #errorModal, #confirmModal {
@@ -697,7 +696,6 @@ map.on('moveend', function() {
 });
 
 window.addEventListener('message', function(event) {
-    console.log('Message in Karte empfangen:', JSON.stringify(event.data));
     
     if (!event.data || typeof event.data !== 'object') return;
 
