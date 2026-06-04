@@ -574,6 +574,14 @@ function setMode(mode) {
 }
 
 function showModeSelector() {
+    if (drawnItems.getLayers().length > 0) {
+        if (!confirm('Wenn Sie die Kategorie wechseln, werden Ihre bisherigen Zeichnungen gelöscht. Fortfahren?')) {
+            return;
+        }
+        drawnItems.clearLayers();
+        sessionStorage.removeItem(storageKey);
+        window.parent.postMessage(JSON.stringify({ type: 'FeatureCollection', features: [] }), '*');
+    }
     document.getElementById('modeSelector').style.display = 'flex';
     document.getElementById('modeBanner').style.display = 'none';
     document.getElementById('legendPoints').style.display = 'none';
