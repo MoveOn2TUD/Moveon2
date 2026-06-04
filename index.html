@@ -542,6 +542,12 @@ function buildDrawControl(mode) {
 
 function setMode(mode) {
     currentMode = mode;
+    var modeMap = {
+    'abstellanlage': 'AO01',
+    'strecke':       'AO02',
+    'beschilderung': 'AO03'
+};
+window.parent.postMessage({ type: 'setModus', value: modeMap[mode] }, '*');
     document.getElementById('modeSelector').style.display = 'none';
     document.getElementById('legendPoints').style.display = (mode === 'abstellanlage') ? 'block' : 'none';
     document.getElementById('legendLines').style.display  = (mode === 'strecke')       ? 'block' : 'none';
