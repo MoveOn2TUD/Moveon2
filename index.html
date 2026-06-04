@@ -540,14 +540,24 @@ function buildDrawControl(mode) {
     map.addControl(drawControl);
 }
 
+// ── Modus aus GeoJSON-Kategorie ableiten ──────────────────────
+function getModeFromGeoJSON(geoData) {
+    if (!geoData || !geoData.features || geoData.features.length === 0) return null;
+    var kategorie = geoData.features[0].properties.kategorie;
+    if (kategorie === 'Abstellanlage')                                     return 'abstellanlage';
+    if (kategorie === 'Streckenmaßnahme' || kategorie === 'Sonderbauwerk') return 'strecke';
+    if (kategorie === 'Beschilderung')                                     return 'beschilderung';
+    return null;
+}
+
 function setMode(mode) {
     currentMode = mode;
     var modeMap = {
-    'abstellanlage': 'AO01',
-    'strecke':       'AO02',
-    'beschilderung': 'AO03'
-};
-window.parent.postMessage({ type: 'setModus', value: modeMap[mode] }, '*');
+        'abstellanlage': 'AO01',
+        'strecke':       'AO02',
+        'beschilderung': 'AO03'
+    };
+    window.parent.postMessage({ type: 'setModus', value: modeMap[mode] }, '*');
     document.getElementById('modeSelector').style.display = 'none';
     document.getElementById('legendPoints').style.display = (mode === 'abstellanlage') ? 'block' : 'none';
     document.getElementById('legendLines').style.display  = (mode === 'strecke')       ? 'block' : 'none';
@@ -626,8 +636,16 @@ function restoreFromGeoJSON(geoData) {
     });
 }
 
+// ── Beim Laden: GeoJSON + Modus aus sessionStorage wiederherstellen ──
 var saved = sessionStorage.getItem(storageKey);
-if (saved) { try { restoreFromGeoJSON(JSON.parse(saved)); } catch(e) {} }
+if (saved) {
+    try {
+        var geoData = JSON.parse(saved);
+        restoreFromGeoJSON(geoData);
+        var modeFromStorage = getModeFromGeoJSON(geoData);
+        if (modeFromStorage) setMode(modeFromStorage);
+    } catch(e) {}
+}
 
 var savedView = sessionStorage.getItem(viewKey);
 if (savedView) {
@@ -650,20 +668,30 @@ map.on('moveend', function() {
 
 window.addEventListener('message', function(event) {
     if (!event.data || typeof event.data !== 'object') return;
+
     if (event.data.type === 'setId') {
         var newId = event.data.id;
         if (newId && newId !== karteId) {
-            karteId = newId;
+            karteId    = newId;
             storageKey = 'karteGeoJSON_' + karteId;
             viewKey    = 'karteView_'    + karteId;
             drawnItems.clearLayers();
-            showModeSelector();
             var s = sessionStorage.getItem(storageKey);
-            if (s) { try { restoreFromGeoJSON(JSON.parse(s)); } catch(e) {} }
+            if (s) {
+                try {
+                    var gd = JSON.parse(s);
+                    restoreFromGeoJSON(gd);
+                    var m = getModeFromGeoJSON(gd);
+                    if (m) setMode(m); else showModeSelector();
+                } catch(e) { showModeSelector(); }
+            } else {
+                showModeSelector();
+            }
             var sv = sessionStorage.getItem(viewKey);
             if (sv) { try { var vv = JSON.parse(sv); map.setView([vv.lat, vv.lng], vv.zoom); } catch(e) {} }
         }
     }
+
     if (event.data.type === 'restoreData' && event.data.geojson) {
         try {
             var geoData = JSON.parse(event.data.geojson);
@@ -671,6 +699,9 @@ window.addEventListener('message', function(event) {
                 restoreFromGeoJSON(geoData);
                 sessionStorage.setItem(storageKey, event.data.geojson);
             }
+            // Modus aus gespeicherten Features ableiten
+            var modeFromData = getModeFromGeoJSON(geoData);
+            if (modeFromData && !currentMode) setMode(modeFromData);
         } catch(e) {}
     }
 });
@@ -786,7 +817,7 @@ function confirmPointWithDetails() {
         if (!pText) { showErrorModal('Bitte eine Bezeichnung für "Sonstiges" eingeben.'); return; }
         typeName = 'Sonstiges: ' + pText;
     }
-    var label = document.getElementById('pointLabel').value.trim();
+    var label      = document.getElementById('pointLabel').value.trim();
     var costAmount = document.getElementById('pointCostAmount').value.trim();
     var costUnit   = document.getElementById('pointCostUnit').value;
     var date       = document.getElementById('pointDate').value;
@@ -794,13 +825,13 @@ function confirmPointWithDetails() {
     if (!validateDate(date, document.getElementById('pointDate'), document.getElementById('pointDateError'))) return;
     pendingLayer.setStyle({ color: color, fillColor: color, fillOpacity: 1 });
     pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
-    pendingLayer.feature.properties.typ = typeName;
+    pendingLayer.feature.properties.typ       = typeName;
     pendingLayer.feature.properties.kategorie = 'Abstellanlage';
-    if (label) pendingLayer.feature.properties.kapazitaet = label;
+    if (label)                  pendingLayer.feature.properties.kapazitaet     = label;
     if (costAmount && costUnit) pendingLayer.feature.properties.nutzungskosten = costAmount + ' € ' + costUnit;
     pendingLayer.feature.properties.nutzungsfreigabe = date;
     var popupHtml = '<strong>' + typeName + '</strong>';
-    if (label) popupHtml += '<br>Kapazität: ' + label;
+    if (label)                  popupHtml += '<br>Kapazität: '      + label;
     if (costAmount && costUnit) popupHtml += '<br>Nutzungskosten: ' + costAmount + ' € ' + costUnit;
     popupHtml += '<br>Nutzungsfreigabe: ' + date;
     pendingLayer.bindPopup(popupHtml);
@@ -834,10 +865,10 @@ function confirmLineWithDetails() {
         if (!sText) { showErrorModal('Bitte eine Bezeichnung für "Sonstiges" eingeben.'); return; }
         typeName = 'Sonstiges: ' + sText;
     }
-    var label = document.getElementById('lineLabel').value.trim();
+    var label     = document.getElementById('lineLabel').value.trim();
     var dateStart = document.getElementById('lineDateStart').value;
     var dateEnd   = document.getElementById('lineDateEnd').value;
-    var errEl = document.getElementById('dateError');
+    var errEl   = document.getElementById('dateError');
     var startEl = document.getElementById('lineDateStart');
     var endEl   = document.getElementById('lineDateEnd');
     if (!dateStart) {
@@ -867,10 +898,10 @@ function confirmLineWithDetails() {
         : { color: color, weight: 5, opacity: 1, dashArray: '8, 6' };
     pendingLayer.setStyle(lineStyle);
     pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
-    pendingLayer.feature.properties.typ = typeName;
+    pendingLayer.feature.properties.typ       = typeName;
     pendingLayer.feature.properties.kategorie = selectedLineSolid ? 'Sonderbauwerk' : 'Streckenmaßnahme';
     if (label) pendingLayer.feature.properties.abschnitt = label;
-    pendingLayer.feature.properties.baubeginn = dateStart;
+    pendingLayer.feature.properties.baubeginn       = dateStart;
     pendingLayer.feature.properties.nutzungsfreigabe = dateEnd;
     var popupHtml = '<strong>' + typeName + '</strong>';
     if (label) popupHtml += '<br>Abschnitt: ' + label;
@@ -895,9 +926,9 @@ function confirmSignWithDetails() {
     if (!signType) { showErrorModal('Bitte die Art der Beschilderung eingeben.'); return; }
     if (!validateDate(date, document.getElementById('signDate'), document.getElementById('signDateError'))) return;
     pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
-    pendingLayer.feature.properties.typ = 'Beschilderung';
-    pendingLayer.feature.properties.art = signType;
-    pendingLayer.feature.properties.kategorie = 'Beschilderung';
+    pendingLayer.feature.properties.typ              = 'Beschilderung';
+    pendingLayer.feature.properties.art              = signType;
+    pendingLayer.feature.properties.kategorie        = 'Beschilderung';
     pendingLayer.feature.properties.nutzungsfreigabe = date;
     pendingLayer.bindPopup('<strong>Beschilderung</strong><br>Art: ' + signType + '<br>Nutzungsfreigabe: ' + date);
     drawnItems.addLayer(pendingLayer);
