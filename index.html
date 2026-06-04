@@ -695,17 +695,24 @@ window.addEventListener('message', function(event) {
         }
     }
 
-    if (event.data.type === 'restoreData' && event.data.geojson) {
-        try {
-            var geoData = JSON.parse(event.data.geojson);
-            if (drawnItems.getLayers().length === 0) {
+   if (event.data.type === 'restoreData' && event.data.geojson) {
+    try {
+        var geoData = JSON.parse(event.data.geojson);
+        // Nur wiederherstellen wenn Karte noch leer ist
+        // UND die Daten zur aktuellen ID passen
+        if (drawnItems.getLayers().length === 0) {
+            // Prüfen ob sessionStorage schon neuere Daten hat
+            var existingData = sessionStorage.getItem(storageKey);
+            if (!existingData) {
+                // Nur einspielen wenn noch gar keine Daten für diese ID gespeichert sind
                 restoreFromGeoJSON(geoData);
                 sessionStorage.setItem(storageKey, event.data.geojson);
             }
             var modeFromData = getModeFromGeoJSON(geoData);
             if (modeFromData && !currentMode) setMode(modeFromData);
-        } catch(e) {}
-    }
+        }
+    } catch(e) {}
+}
 });
 
 function saveToStorage() {
