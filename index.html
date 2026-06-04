@@ -192,7 +192,7 @@
                 to right, currentColor 0px, currentColor 6px, transparent 6px, transparent 10px
             );
         }
-        .legend-solid { width: 28px; height: 4px; margin-right: 8px; flex-shrink: 0; border-radius: 2px; }
+        .legend-dash { width: 28px; height: 4px; margin-right: 8px; flex-shrink: 0; border-radius: 2px; }
         .legend-divider { border: none; border-top: 1px solid #e0e0e0; margin: 6px 0; }
 
         #typeModal, #lineModal, #signModal, #errorModal {
@@ -433,8 +433,8 @@
         <button class="type-btn" style="background:#8e44ad;" onclick="selectLineType('Straßenbegleitender Radweg (Protected Bike Lane)','#8e44ad',false,this)"><span class="btn-line"></span>Straßenbegleitender Radweg (Protected Bike Lane)</button>
         <button class="type-btn" style="background:#16a085;" onclick="selectLineType('Fahrradstraße','#16a085',false,this)"><span class="btn-line"></span>Fahrradstraße</button>
         <button class="type-btn" style="background:#d35400;" onclick="selectLineType('Fahrradzone','#d35400',false,this)"><span class="btn-line"></span>Fahrradzone</button>
-        <button class="type-btn" style="background:#1565c0;" onclick="selectLineType('Brücke','#1565c0',true,this)"><span class="btn-solid"></span>Brücke</button>
-        <button class="type-btn" style="background:#4a235a;" onclick="selectLineType('Unterführung','#4a235a',true,this)"><span class="btn-solid"></span>Unterführung</button>
+        <button class="type-btn" style="background:#1565c0;" onclick="selectLineType('Brücke','#1565c0',false,this)"><span class="btn-line"></span>Brücke</button>
+        <button class="type-btn" style="background:#4a235a;" onclick="selectLineType('Unterführung','#4a235a',false,this)"><span class="btn-line"></span>Unterführung</button>
         <button class="type-btn" style="background:#555;" onclick="selectLineType('Sonstiges','#555',false,this); showSonstigesInput()"><span class="btn-line"></span>Sonstiges (selbst beschriften)</button>
         <div id="sonstigesInput">
             <input type="text" id="sonstigesText" placeholder="Bezeichnung eingeben..." maxlength="80" style="margin-top:6px;" />
