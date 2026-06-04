@@ -671,11 +671,14 @@ window.addEventListener('message', function(event) {
 
     if (event.data.type === 'setId') {
         var newId = event.data.id;
-        if (newId && newId !== karteId) {
+        if (newId) {
             karteId    = newId;
             storageKey = 'karteGeoJSON_' + karteId;
             viewKey    = 'karteView_'    + karteId;
             drawnItems.clearLayers();
+            if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+            currentMode = null;
+
             var s = sessionStorage.getItem(storageKey);
             if (s) {
                 try {
@@ -699,7 +702,6 @@ window.addEventListener('message', function(event) {
                 restoreFromGeoJSON(geoData);
                 sessionStorage.setItem(storageKey, event.data.geojson);
             }
-            // Modus aus gespeicherten Features ableiten
             var modeFromData = getModeFromGeoJSON(geoData);
             if (modeFromData && !currentMode) setMode(modeFromData);
         } catch(e) {}
