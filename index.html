@@ -94,7 +94,30 @@
         .legend-note { font-size: 11px; color: #666; line-height: 1.4; }
         .legend-note b { color: #444; }
 
-        #typeModal, #lineModal, #signModal, #errorModal, #confirmModal {
+        /* ── Nachreich-Button (nur Beschilderungs-Modus) ── */
+        .defer-control a {
+            width: auto !important; height: 30px !important; line-height: 30px; padding: 0 12px;
+            display: block; background: #fff; color: #333; font-family: Arial, sans-serif; font-size: 12px;
+            font-weight: bold; white-space: nowrap; text-decoration: none;
+        }
+        .defer-control a:hover { background: #f4f4f4; }
+
+        .info-hint {
+            background: #eef2fb; border: 1px solid #cdd9f3; border-radius: 8px; padding: 10px 12px;
+            font-size: 12px; color: #34507e; line-height: 1.45; margin-bottom: 12px;
+        }
+        .info-hint b { color: #233a63; }
+
+        .checkbox-row {
+            display: flex; align-items: flex-start; gap: 10px; background: #f7f9fc;
+            border: 1.5px solid #dce3ef; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer;
+        }
+        .checkbox-row.error { border-color: #e74c3c; }
+        .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; cursor: pointer; }
+        .checkbox-row label { font-size: 13px; color: #333; line-height: 1.4; cursor: pointer; }
+        #deferCheckError { display: none; color: #e74c3c; font-size: 11px; font-weight: bold; margin: 0 0 10px 2px; }
+
+        #typeModal, #lineModal, #signModal, #errorModal, #confirmModal, #deferModal, #infoModal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5);
         }
@@ -240,7 +263,7 @@
         <div class="legend-title">Beschilderung</div>
         <div class="legend-item"><div class="legend-solid" style="color:#5c6bc0;"></div>Wegweisende Beschilderung</div>
         <hr class="legend-divider">
-        <div class="legend-note">Bei einem <b>sehr umfangreichen Netz</b> wenden Sie sich bitte an <b>julius.reh@tu-dresden.de</b>.</div>
+        <div class="legend-note">Zeichnen Sie den Verlauf als Linie. Bei einem <b>sehr umfangreichen Netz</b> nutzen Sie den Knopf <b>„Beschilderung wird nachgereicht"</b> oder wenden Sie sich an <b>julius.reh@tu-dresden.de</b>.</div>
     </div>
 </div>
 
@@ -344,6 +367,41 @@
     </div>
 </div>
 
+<!-- Modal: Beschilderung wird nachgereicht -->
+<div id="deferModal">
+    <div class="type-modal-content">
+        <h4>Beschilderung wird nachgereicht</h4>
+        <div class="info-hint">
+            Wenn sich die wegweisende Beschilderung nicht sinnvoll von Hand zeichnen lässt
+            (z. B. ein <b>sehr umfangreiches Netz</b>), können Sie dies hier vermerken und trotzdem fortfahren.
+            Bitte senden Sie uns die Daten anschließend an <b>julius.reh@tu-dresden.de</b>.
+        </div>
+        <div class="checkbox-row" id="deferCheckRow" onclick="toggleDeferCheck(event)">
+            <input type="checkbox" id="deferCheck" onclick="clearDeferCheckError()" />
+            <label for="deferCheck">Ja, ich reiche die wegweisende Beschilderung nach (z. B. per E-Mail).</label>
+        </div>
+        <div id="deferCheckError">Bitte bestätigen Sie, dass Sie die Beschilderung nachreichen.</div>
+        <div class="section-fields">
+            <span class="field-label">Art der Beschilderung (optional)</span>
+            <input type="text" id="deferType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
+            <span class="field-label">Geplante Nutzungsfreigabe (optional)</span>
+            <input type="date" id="deferDate" oninput="clearDeferDateError()" min="2023-10-01" max="2027-04-30" />
+            <div id="deferDateError">Das Datum muss zwischen 01.10.2023 und 30.04.2027 liegen.</div>
+        </div>
+        <button class="confirm-line-btn" onclick="confirmDefer()">Bestätigen &amp; fortfahren</button>
+        <button class="cancel-btn" onclick="cancelDefer()">Abbrechen</button>
+    </div>
+</div>
+
+<!-- Info-Modal (neutrale Bestätigung) -->
+<div id="infoModal">
+    <div class="modal-content">
+        <h4>Hinweis</h4>
+        <p id="infoModalText"></p>
+        <button onclick="closeInfoModal()">OK</button>
+    </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
@@ -355,6 +413,7 @@ var FALLBACK_LNG  = 10.5;
 var FALLBACK_ZOOM = 5.5;
 
 var SIGN_COLOR = '#5c6bc0';
+var DEFER_STATUS = 'Beschilderung wird nachgereicht';
 
 var currentMode = null;
 
@@ -381,6 +440,27 @@ L.drawLocal.edit.handlers.edit.tooltip.subtext = 'Abbrechen klicken, um Änderun
 L.drawLocal.edit.handlers.remove.tooltip.text  = 'Klicken Sie auf ein Element zum Löschen.';
 
 var drawControl = null;
+var deferControl = null;
+
+// ── Nachreich-Button (nur Beschilderungs-Modus) ──────────────
+function addDeferControl() {
+    if (deferControl) return;
+    deferControl = L.control({ position: 'topleft' });
+    deferControl.onAdd = function() {
+        var div = L.DomUtil.create('div', 'leaflet-bar defer-control');
+        var a = L.DomUtil.create('a', '', div);
+        a.href = '#';
+        a.title = 'Beschilderung wird nachgereicht';
+        a.innerHTML = '✎ Beschilderung wird nachgereicht';
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.on(a, 'click', function(e) { L.DomEvent.preventDefault(e); openDeferModal(); });
+        return div;
+    };
+    deferControl.addTo(map);
+}
+function removeDeferControl() {
+    if (deferControl) { map.removeControl(deferControl); deferControl = null; }
+}
 
 function buildDrawControl(mode) {
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
@@ -431,6 +511,7 @@ function setMode(mode) {
     buildDrawControl(mode);
     var mc = map.getContainer();
     if (mode === 'beschilderung') mc.classList.add('mode-beschilderung'); else mc.classList.remove('mode-beschilderung');
+    if (mode === 'beschilderung') addDeferControl(); else removeDeferControl();
 }
 
 function showModeSelector() {
@@ -456,6 +537,7 @@ function doShowModeSelector() {
     document.getElementById('legendSign').style.display   = 'none';
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
     map.getContainer().classList.remove('mode-beschilderung');
+    removeDeferControl();
     currentMode = null;
 }
 
@@ -518,6 +600,7 @@ if (saved) {
         restoreFromGeoJSON(geoData);
         var modeFromStorage = getModeFromGeoJSON(geoData);
         if (modeFromStorage) setMode(modeFromStorage);
+        maybeMarkDeferred(geoData);
     } catch(e) {}
 }
 
@@ -548,6 +631,7 @@ window.addEventListener('message', function(event) {
             drawnItems.clearLayers();
             if (drawControl) { map.removeControl(drawControl); drawControl = null; }
             map.getContainer().classList.remove('mode-beschilderung');
+            removeDeferControl();
             currentMode = null;
 
             var s = sessionStorage.getItem(storageKey);
@@ -557,6 +641,7 @@ window.addEventListener('message', function(event) {
                     restoreFromGeoJSON(gd);
                     var m = getModeFromGeoJSON(gd);
                     if (m) setMode(m); else showModeSelector();
+                    maybeMarkDeferred(gd);
                 } catch(e) { showModeSelector(); }
             } else { showModeSelector(); }
             var sv = sessionStorage.getItem(viewKey);
@@ -575,6 +660,7 @@ window.addEventListener('message', function(event) {
             }
             var modeFromData = getModeFromGeoJSON(geoData);
             if (modeFromData && !currentMode) setMode(modeFromData);
+            maybeMarkDeferred(geoData);
         }
     } catch(e) {}
 }
@@ -785,6 +871,88 @@ function confirmSignWithDetails() {
 function cancelSign() {
     pendingLayer = null;
     document.getElementById('signModal').style.display = 'none';
+}
+
+// ── Beschilderung: "wird nachgereicht" ────────────────────────
+function showInfoModal(m) { document.getElementById('infoModalText').innerText = m; document.getElementById('infoModal').style.display = 'block'; }
+function closeInfoModal() { document.getElementById('infoModal').style.display = 'none'; }
+
+function toggleDeferCheck(ev) {
+    // Klick auf die Zeile (außer direkt auf die Checkbox) schaltet die Checkbox um
+    if (ev && ev.target && ev.target.id === 'deferCheck') return;
+    var cb = document.getElementById('deferCheck');
+    cb.checked = !cb.checked;
+    clearDeferCheckError();
+}
+function clearDeferCheckError() {
+    document.getElementById('deferCheckError').style.display = 'none';
+    document.getElementById('deferCheckRow').classList.remove('error');
+}
+function clearDeferDateError() {
+    document.getElementById('deferDateError').style.display = 'none';
+    document.getElementById('deferDate').classList.remove('error');
+}
+
+function openDeferModal() {
+    // Falls schon eine Linie gezeichnet wurde, keinen Platzhalter anbieten
+    if (drawnItems.getLayers().length > 0) {
+        showInfoModal('Sie haben bereits eine Beschilderung eingezeichnet. Diese ist gespeichert – ein Nachreichen ist nicht nötig.');
+        return;
+    }
+    document.getElementById('deferCheck').checked = false;
+    document.getElementById('deferType').value = '';
+    document.getElementById('deferDate').value = '';
+    clearDeferCheckError();
+    clearDeferDateError();
+    document.getElementById('deferModal').style.display = 'block';
+}
+
+function confirmDefer() {
+    var checked = document.getElementById('deferCheck').checked;
+    if (!checked) {
+        document.getElementById('deferCheckError').style.display = 'block';
+        document.getElementById('deferCheckRow').classList.add('error');
+        return;
+    }
+    var artVal  = document.getElementById('deferType').value.trim();
+    var dateVal = document.getElementById('deferDate').value;
+    if (dateVal && !isDateInRange(dateVal)) {
+        document.getElementById('deferDateError').style.display = 'block';
+        document.getElementById('deferDate').classList.add('error');
+        return;
+    }
+    var fc = {
+        type: 'FeatureCollection',
+        features: [{
+            type: 'Feature',
+            properties: { typ: 'Beschilderung', kategorie: 'Beschilderung', status: DEFER_STATUS, art: artVal, nutzungsfreigabe: dateVal },
+            geometry: null
+        }]
+    };
+    var jsonStr = JSON.stringify(fc);
+    try { sessionStorage.setItem(storageKey, jsonStr); } catch(e) {}
+    window.parent.postMessage(jsonStr, '*');
+
+    document.getElementById('deferModal').style.display = 'none';
+    var bt = document.getElementById('bannerText');
+    if (bt) bt.innerText = 'Kategorie: Beschilderung — wird nachgereicht';
+    showInfoModal('Vielen Dank. Es wurde vermerkt, dass die Beschilderung nachgereicht wird. Sie können nun fortfahren.');
+}
+
+function cancelDefer() {
+    document.getElementById('deferModal').style.display = 'none';
+}
+
+// Banner-Hinweis setzen, falls gespeicherte Daten "nachgereicht" sind
+function maybeMarkDeferred(geoData) {
+    try {
+        var f = geoData.features && geoData.features[0];
+        if (f && f.properties && f.properties.status === DEFER_STATUS && !f.geometry) {
+            var bt = document.getElementById('bannerText');
+            if (bt && bt.innerText.indexOf('nachgereicht') === -1)
+                bt.innerText = 'Kategorie: Beschilderung — wird nachgereicht';
+        }
+    } catch(e) {}
 }
 
 map.on(L.Draw.Event.EDITSTART, function() {
