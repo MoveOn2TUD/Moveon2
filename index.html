@@ -117,6 +117,28 @@
         .checkbox-row label { font-size: 13px; color: #333; line-height: 1.4; cursor: pointer; }
         #deferCheckError { display: none; color: #e74c3c; font-size: 11px; font-weight: bold; margin: 0 0 10px 2px; }
 
+        /* ── Sperr-Ebene "wird nachgereicht" ── */
+        #deferLock {
+            display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 1400; background: rgba(236,239,247,0.92); backdrop-filter: blur(2px);
+            align-items: center; justify-content: center; font-family: Arial, sans-serif;
+        }
+        #deferLockInner {
+            background: #fff; border-radius: 16px; padding: 26px 30px; max-width: 380px; text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); border-top: 4px solid #5c6bc0;
+        }
+        .defer-lock-badge {
+            display: inline-block; background: #e8eaf6; color: #3949ab; font-size: 12px; font-weight: bold;
+            padding: 4px 12px; border-radius: 20px; margin-bottom: 12px;
+        }
+        #deferLockInner h3 { margin: 0 0 8px 0; font-size: 16px; color: #222; }
+        #deferLockInner p { margin: 0 0 18px 0; font-size: 13px; color: #666; line-height: 1.45; }
+        .defer-lock-btn {
+            padding: 11px 18px; background: #2c7be5; color: #fff; border: none; border-radius: 8px;
+            cursor: pointer; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold;
+        }
+        .defer-lock-btn:hover { background: #1a5ab5; }
+
         #typeModal, #lineModal, #signModal, #errorModal, #confirmModal, #deferModal, #infoModal {
             display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%;
             background-color: rgba(0,0,0,0.5);
@@ -264,6 +286,16 @@
         <div class="legend-item"><div class="legend-solid" style="color:#5c6bc0;"></div>Wegweisende Beschilderung</div>
         <hr class="legend-divider">
         <div class="legend-note">Zeichnen Sie den Verlauf als Linie. Bei einem <b>sehr umfangreichen Netz</b> nutzen Sie den Knopf <b>„Beschilderung wird nachgereicht"</b> oder wenden Sie sich an <b>julius.reh@tu-dresden.de</b>.</div>
+    </div>
+
+    <!-- Sperr-Ebene: Beschilderung wurde als "wird nachgereicht" vermerkt -->
+    <div id="deferLock">
+        <div id="deferLockInner">
+            <div class="defer-lock-badge">🪧 wird nachgereicht</div>
+            <h3>Beschilderung wird nachgereicht</h3>
+            <p>Für diese Maßnahme ist vermerkt, dass die wegweisende Beschilderung nachgereicht wird. Die Karte ist daher gesperrt.</p>
+            <button class="defer-lock-btn" onclick="unlockDefer()">Maßnahme jetzt doch eintragen</button>
+        </div>
     </div>
 </div>
 
@@ -414,6 +446,7 @@ var FALLBACK_ZOOM = 5.5;
 
 var SIGN_COLOR = '#5c6bc0';
 var DEFER_STATUS = 'Beschilderung wird nachgereicht';
+var signDeferred = false;
 
 var currentMode = null;
 
@@ -511,7 +544,43 @@ function setMode(mode) {
     buildDrawControl(mode);
     var mc = map.getContainer();
     if (mode === 'beschilderung') mc.classList.add('mode-beschilderung'); else mc.classList.remove('mode-beschilderung');
-    if (mode === 'beschilderung') addDeferControl(); else removeDeferControl();
+    document.getElementById('deferLock').style.display = 'none';
+    if (mode === 'beschilderung') {
+        if (signDeferred) {
+            lockDeferUI();           // "wird nachgereicht": Karte sperren
+        } else {
+            addDeferControl();       // normal: zeichnen + Nachreich-Knopf
+        }
+    } else {
+        removeDeferControl();
+    }
+}
+
+// Karte für eine als "nachgereicht" vermerkte Beschilderung sperren
+function lockDeferUI() {
+    signDeferred = true;
+    if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+    removeDeferControl();
+    document.getElementById('deferLock').style.display = 'flex';
+    var bt = document.getElementById('bannerText');
+    if (bt) bt.innerText = 'Kategorie: Beschilderung — wird nachgereicht';
+}
+
+// Bewusst entsperren, um die Maßnahme doch jetzt einzutragen
+function unlockDefer() {
+    signDeferred = false;
+    document.getElementById('deferLock').style.display = 'none';
+    buildDrawControl('beschilderung');
+    addDeferControl();
+    var bt = document.getElementById('bannerText');
+    if (bt) bt.innerText = 'Kategorie: Beschilderung';
+}
+
+function isDeferredGeo(geoData) {
+    try {
+        var f = geoData && geoData.features && geoData.features[0];
+        return !!(f && f.properties && f.properties.status === DEFER_STATUS && !f.geometry);
+    } catch(e) { return false; }
 }
 
 function showModeSelector() {
@@ -538,6 +607,8 @@ function doShowModeSelector() {
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
     map.getContainer().classList.remove('mode-beschilderung');
     removeDeferControl();
+    signDeferred = false;
+    document.getElementById('deferLock').style.display = 'none';
     currentMode = null;
 }
 
@@ -599,6 +670,7 @@ if (saved) {
         var geoData = JSON.parse(saved);
         restoreFromGeoJSON(geoData);
         var modeFromStorage = getModeFromGeoJSON(geoData);
+        signDeferred = isDeferredGeo(geoData);
         if (modeFromStorage) setMode(modeFromStorage);
         maybeMarkDeferred(geoData);
     } catch(e) {}
@@ -632,6 +704,8 @@ window.addEventListener('message', function(event) {
             if (drawControl) { map.removeControl(drawControl); drawControl = null; }
             map.getContainer().classList.remove('mode-beschilderung');
             removeDeferControl();
+            signDeferred = false;
+            document.getElementById('deferLock').style.display = 'none';
             currentMode = null;
 
             var s = sessionStorage.getItem(storageKey);
@@ -640,6 +714,7 @@ window.addEventListener('message', function(event) {
                     var gd = JSON.parse(s);
                     restoreFromGeoJSON(gd);
                     var m = getModeFromGeoJSON(gd);
+                    signDeferred = isDeferredGeo(gd);
                     if (m) setMode(m); else showModeSelector();
                     maybeMarkDeferred(gd);
                 } catch(e) { showModeSelector(); }
@@ -659,6 +734,7 @@ window.addEventListener('message', function(event) {
                 sessionStorage.setItem(storageKey, event.data.geojson);
             }
             var modeFromData = getModeFromGeoJSON(geoData);
+            signDeferred = isDeferredGeo(geoData);
             if (modeFromData && !currentMode) setMode(modeFromData);
             maybeMarkDeferred(geoData);
         }
@@ -934,8 +1010,7 @@ function confirmDefer() {
     window.parent.postMessage(jsonStr, '*');
 
     document.getElementById('deferModal').style.display = 'none';
-    var bt = document.getElementById('bannerText');
-    if (bt) bt.innerText = 'Kategorie: Beschilderung — wird nachgereicht';
+    lockDeferUI();
     showInfoModal('Vielen Dank. Es wurde vermerkt, dass die Beschilderung nachgereicht wird. Sie können nun fortfahren.');
 }
 
