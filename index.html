@@ -161,6 +161,23 @@
             box-shadow: 0 0 3px rgba(0,0,0,0.4);
         }
 
+        /* ── Upload-Button (nur im Beschilderungs-Modus) ── */
+        .upload-control a {
+            width: auto !important;
+            height: 30px !important;
+            line-height: 30px;
+            padding: 0 12px;
+            display: block;
+            background: #fff;
+            color: #333;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+        .upload-control a:hover { background: #f4f4f4; }
+
         #legendPoints {
             position: absolute; bottom: 30px; right: 10px; z-index: 1000;
             background: white; padding: 10px 14px; border-radius: 8px;
@@ -191,6 +208,10 @@
             background-image: repeating-linear-gradient(
                 to right, currentColor 0px, currentColor 6px, transparent 6px, transparent 10px
             );
+        }
+        .legend-solid {
+            width: 28px; height: 4px; margin-right: 8px; flex-shrink: 0; border-radius: 2px;
+            background: currentColor;
         }
         .legend-divider { border: none; border-top: 1px solid #e0e0e0; margin: 6px 0; }
 
@@ -271,6 +292,27 @@
         #sonstigesInput input:focus,
         #pointSonstigesInput input:focus { outline: none; border-color: #2c7be5; }
 
+        /* ── Datei-Upload-Bereich im Beschilderungs-Modal ── */
+        .upload-box {
+            border: 2px dashed #aab4cf; border-radius: 8px;
+            background: #f7f9fc; padding: 16px; text-align: center; margin-bottom: 12px;
+        }
+        .upload-box .upload-hint {
+            font-size: 11px; color: #777; margin-top: 8px; line-height: 1.4;
+        }
+        .upload-pick-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 16px; background: #2c7be5; color: #fff;
+            border: none; border-radius: 6px; cursor: pointer;
+            font-family: Arial, sans-serif; font-size: 13px; font-weight: bold;
+        }
+        .upload-pick-btn:hover { background: #1a5ab5; }
+        #uploadedFileName {
+            display: none; margin-top: 10px; padding: 8px 10px;
+            background: #e8f4e8; border: 1px solid #b7ddb7; border-radius: 6px;
+            font-size: 12px; color: #2e7d32; font-weight: bold; word-break: break-all;
+        }
+
         .confirm-line-btn {
             width: 100%; padding: 11px; background: #2c7be5; color: white;
             border: none; border-radius: 6px; cursor: pointer;
@@ -338,7 +380,7 @@
                 <div class="mode-icon" style="background:#e8eaf6;">🪧</div>
                 <div class="mode-text">
                     Wegweisende Beschilderung
-                    <small>Wegweisungen, Hinweisschilder …</small>
+                    <small>GPX-, KML-, GeoJSON- oder Shapefile-Datei hochladen …</small>
                 </div>
             </button>
         </div>
@@ -378,12 +420,13 @@
 
     <div id="legendSign" style="display:none;">
         <div class="legend-title">Beschilderung</div>
-        <div class="legend-item">
-            <div style="width:14px;height:14px;margin-right:8px;flex-shrink:0;">📍</div>
-            Wegweisende Beschilderung
-        </div>
+        <div class="legend-item"><div class="legend-solid" style="color:#5c6bc0;"></div>Wegweisende Beschilderung (Linie / Netz)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#5c6bc0;"></div>Wegweisende Beschilderung (Punkt)</div>
     </div>
 </div>
+
+<!-- Verstecktes Datei-Eingabefeld für Upload -->
+<input type="file" id="fileInput" accept=".gpx,.kml,.geojson,.json,.zip" style="display:none;" />
 
 <!-- Modal: Punkte -->
 <div id="typeModal">
@@ -453,10 +496,22 @@
     </div>
 </div>
 
-<!-- Modal: Beschilderung -->
+<!-- Modal: Beschilderung (Datei-Upload) -->
 <div id="signModal">
     <div class="type-modal-content">
-        <h4>Beschilderung eintragen</h4>
+        <h4>Wegweisende Beschilderung hochladen</h4>
+
+        <div class="upload-box">
+            <button class="upload-pick-btn" onclick="document.getElementById('fileInput').click()">
+                📁 Datei auswählen
+            </button>
+            <div class="upload-hint">
+                Erlaubte Formate: <b>GPX</b>, <b>KML</b>, <b>GeoJSON</b> oder gezippte <b>Shapefile</b> (.zip mit .shp, .shx, .dbf, möglichst .prj).<br>
+                Linien, Netze und Punkte sind möglich. Koordinaten am besten in WGS84 (EPSG:4326).
+            </div>
+            <div id="uploadedFileName"></div>
+        </div>
+
         <div class="section-fields">
             <span class="field-label">Art der Beschilderung</span>
             <input type="text" id="signType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
@@ -490,6 +545,10 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<!-- GPX/KML -> GeoJSON -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.js"></script>
+<!-- Shapefile (.zip) -> GeoJSON -->
+<script src="https://unpkg.com/shpjs@4.0.4/dist/shp.js"></script>
 
 <script>
 var DATE_MIN = '2023-10-01';
@@ -497,6 +556,8 @@ var DATE_MAX = '2027-04-30';
 var FALLBACK_LAT  = 51.5;
 var FALLBACK_LNG  = 10.5;
 var FALLBACK_ZOOM = 5.5;
+
+var SIGN_COLOR = '#5c6bc0';   // Farbe für Beschilderung (Linien/Netze/Punkte aus Upload)
 
 var currentMode = null;
 
@@ -525,6 +586,7 @@ L.drawLocal.edit.handlers.edit.tooltip.subtext = 'Abbrechen klicken, um Änderun
 L.drawLocal.edit.handlers.remove.tooltip.text  = 'Klicken Sie auf ein Element zum Löschen.';
 
 var drawControl = null;
+var uploadControl = null;
 
 function buildDrawControl(mode) {
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
@@ -541,12 +603,44 @@ function buildDrawControl(mode) {
         drawOpts.draw.circlemarker = { color: '#800020', fillColor: '#800020', fillOpacity: 1, radius: 8 };
         drawOpts.draw.marker       = false;
     } else if (mode === 'beschilderung') {
+        // Kein Zeichnen mehr – Beschilderung wird per Datei-Upload eingetragen.
+        // Edit/Löschen-Werkzeug bleibt erhalten, um hochgeladene Daten zu entfernen.
         drawOpts.draw.polyline     = false;
         drawOpts.draw.circlemarker = false;
-        drawOpts.draw.marker       = true;
+        drawOpts.draw.marker       = false;
     }
     drawControl = new L.Control.Draw(drawOpts);
     map.addControl(drawControl);
+}
+
+// ── Upload-Button (nur Beschilderungs-Modus) ──────────────────
+function addUploadControl() {
+    if (uploadControl) return;
+    uploadControl = L.control({ position: 'topleft' });
+    uploadControl.onAdd = function() {
+        var div = L.DomUtil.create('div', 'leaflet-bar upload-control');
+        var a = L.DomUtil.create('a', '', div);
+        a.href = '#';
+        a.title = 'Datei hochladen';
+        a.innerHTML = '📁 Datei hochladen (GPX / KML / GeoJSON / SHP-ZIP)';
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.on(a, 'click', function(e) {
+            L.DomEvent.preventDefault(e);
+            document.getElementById('signType').value = '';
+            document.getElementById('signDate').value = '';
+            document.getElementById('signDateError').style.display = 'none';
+            document.getElementById('signDate').classList.remove('error');
+            document.getElementById('uploadedFileName').style.display = 'none';
+            document.getElementById('uploadedFileName').innerText = '';
+            pendingUploadGeoJSON = null;
+            document.getElementById('fileInput').click();
+        });
+        return div;
+    };
+    uploadControl.addTo(map);
+}
+function removeUploadControl() {
+    if (uploadControl) { map.removeControl(uploadControl); uploadControl = null; }
 }
 
 // ── Modus aus GeoJSON-Kategorie ableiten ──────────────────────
@@ -580,6 +674,7 @@ function setMode(mode) {
     document.getElementById('bannerDot').style.background = labels[mode].color;
     document.getElementById('modeBanner').style.display = 'flex';
     buildDrawControl(mode);
+    if (mode === 'beschilderung') addUploadControl(); else removeUploadControl();
 }
 
 function showModeSelector() {
@@ -609,6 +704,7 @@ function doShowModeSelector() {
     document.getElementById('legendLines').style.display  = 'none';
     document.getElementById('legendSign').style.display   = 'none';
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+    removeUploadControl();
     currentMode = null;
 }
 
@@ -645,6 +741,8 @@ function restoreFromGeoJSON(geoData) {
         },
         style: function(feature) {
             var props = feature.properties || {};
+            if (props.kategorie === 'Beschilderung')
+                return { color: SIGN_COLOR, weight: 5, opacity: 1 };
             var color = '#555';
             if (props.typ && lineColorMap[props.typ]) color = lineColorMap[props.typ];
             var solid = (props.kategorie === 'Sonderbauwerk');
@@ -696,7 +794,7 @@ map.on('moveend', function() {
 });
 
 window.addEventListener('message', function(event) {
-    
+
     if (!event.data || typeof event.data !== 'object') return;
 
     if (event.data.type === 'setId') {
@@ -707,6 +805,7 @@ window.addEventListener('message', function(event) {
             viewKey    = 'karteView_'    + karteId;
             drawnItems.clearLayers();
             if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+            removeUploadControl();
             currentMode = null;
 
             var s = sessionStorage.getItem(storageKey);
@@ -770,6 +869,102 @@ var pendingLayer = null;
 var selectedLineType = null, selectedLineColor = null, selectedLineSolid = false;
 var selectedPointType = null, selectedPointColor = null;
 
+// ── Datei-Upload für Beschilderung ────────────────────────────
+var pendingUploadGeoJSON = null;   // geparste GeoJSON-Daten aus dem Upload
+var lastFileName = '';
+
+function resetFileInput() {
+    document.getElementById('fileInput').value = '';
+}
+
+function normalizeGeo(geo) {
+    // shpjs liefert bei mehreren Layern ein Array von FeatureCollections
+    if (Array.isArray(geo)) {
+        var feats = [];
+        geo.forEach(function(fc) {
+            if (fc && fc.features) feats = feats.concat(fc.features);
+        });
+        return { type: 'FeatureCollection', features: feats };
+    }
+    if (geo && geo.type === 'Feature') {
+        return { type: 'FeatureCollection', features: [geo] };
+    }
+    return geo;
+}
+
+function processUploadedGeo(geo) {
+    geo = normalizeGeo(geo);
+    if (!geo || !geo.features || geo.features.length === 0) {
+        showErrorModal('Die Datei enthält keine erkennbaren Geodaten.');
+        resetFileInput();
+        return;
+    }
+    pendingUploadGeoJSON = geo;
+    var nameEl = document.getElementById('uploadedFileName');
+    nameEl.innerText = '✓ ' + lastFileName + '  (' + geo.features.length + ' Objekt(e) erkannt)';
+    nameEl.style.display = 'block';
+    document.getElementById('signModal').style.display = 'block';
+    resetFileInput();
+}
+
+function handleFileUpload(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    lastFileName = file.name;
+    var name = file.name.toLowerCase();
+    var reader = new FileReader();
+
+    if (name.endsWith('.zip')) {
+        reader.onload = function(ev) {
+            if (typeof shp === 'undefined') {
+                showErrorModal('Die Shapefile-Bibliothek konnte nicht geladen werden (keine Internetverbindung?).');
+                resetFileInput(); return;
+            }
+            shp(ev.target.result).then(function(geo) {
+                processUploadedGeo(geo);
+            }).catch(function(err) {
+                showErrorModal('Die Shapefile-ZIP konnte nicht gelesen werden. Bitte stellen Sie sicher, dass .shp, .shx und .dbf (möglichst auch .prj) enthalten sind.');
+                resetFileInput();
+            });
+        };
+        reader.readAsArrayBuffer(file);
+
+    } else if (name.endsWith('.gpx') || name.endsWith('.kml')) {
+        reader.onload = function(ev) {
+            try {
+                if (typeof toGeoJSON === 'undefined') {
+                    showErrorModal('Die GPX/KML-Bibliothek konnte nicht geladen werden (keine Internetverbindung?).');
+                    resetFileInput(); return;
+                }
+                var dom = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+                var geo = name.endsWith('.gpx') ? toGeoJSON.gpx(dom) : toGeoJSON.kml(dom);
+                processUploadedGeo(geo);
+            } catch(err) {
+                showErrorModal('Die Datei konnte nicht gelesen werden.');
+                resetFileInput();
+            }
+        };
+        reader.readAsText(file);
+
+    } else if (name.endsWith('.geojson') || name.endsWith('.json')) {
+        reader.onload = function(ev) {
+            try {
+                processUploadedGeo(JSON.parse(ev.target.result));
+            } catch(err) {
+                showErrorModal('Die GeoJSON-Datei konnte nicht gelesen werden.');
+                resetFileInput();
+            }
+        };
+        reader.readAsText(file);
+
+    } else {
+        showErrorModal('Nicht unterstütztes Format. Bitte eine GPX-, KML-, GeoJSON- oder gezippte Shapefile-Datei (.zip) hochladen.');
+        resetFileInput();
+    }
+}
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+// ── Zeichnen-Ereignisse (Strecke + Abstellanlage) ─────────────
 map.on(L.Draw.Event.CREATED, function(event) {
     pendingLayer = event.layer;
     if (event.layerType === 'circlemarker') {
@@ -797,12 +992,6 @@ map.on(L.Draw.Event.CREATED, function(event) {
         document.getElementById('dateError').innerText = '';
         document.querySelectorAll('#lineModal .type-btn').forEach(function(b) { b.classList.remove('selected'); });
         document.getElementById('lineModal').style.display = 'block';
-    } else if (event.layerType === 'marker') {
-        document.getElementById('signType').value = '';
-        document.getElementById('signDate').value = '';
-        document.getElementById('signDateError').style.display = 'none';
-        document.getElementById('signDate').classList.remove('error');
-        document.getElementById('signModal').style.display = 'block';
     }
 });
 
@@ -958,26 +1147,62 @@ function cancelLine() {
     document.getElementById('sonstigesText').value = '';
 }
 
+// ── Beschilderung: hochgeladene Datei übernehmen ──────────────
 function confirmSignWithDetails() {
-    if (!pendingLayer) return;
     var signType = document.getElementById('signType').value.trim();
     var date     = document.getElementById('signDate').value;
+    if (!pendingUploadGeoJSON) {
+        showErrorModal('Bitte zuerst eine Datei hochladen.');
+        return;
+    }
     if (!signType) { showErrorModal('Bitte die Art der Beschilderung eingeben.'); return; }
     if (!validateDate(date, document.getElementById('signDate'), document.getElementById('signDateError'))) return;
-    pendingLayer.feature = pendingLayer.feature || { type: 'Feature', properties: {} };
-    pendingLayer.feature.properties.typ              = 'Beschilderung';
-    pendingLayer.feature.properties.art              = signType;
-    pendingLayer.feature.properties.kategorie        = 'Beschilderung';
-    pendingLayer.feature.properties.nutzungsfreigabe = date;
-    pendingLayer.bindPopup('<strong>Beschilderung</strong><br>Art: ' + signType + '<br>Nutzungsfreigabe: ' + date);
-    drawnItems.addLayer(pendingLayer);
-    pendingLayer = null;
+
+    var addedCount = 0;
+    L.geoJSON(pendingUploadGeoJSON, {
+        pointToLayer: function(feature, latlng) {
+            return L.marker(latlng);
+        },
+        style: function(feature) {
+            return { color: SIGN_COLOR, weight: 5, opacity: 1 };
+        },
+        onEachFeature: function(feature, layer) {
+            layer.feature = layer.feature || { type: 'Feature', properties: {} };
+            layer.feature.properties = layer.feature.properties || {};
+            // Standard-Eigenschaften setzen (Original-Attribute bleiben erhalten)
+            layer.feature.properties.typ              = 'Beschilderung';
+            layer.feature.properties.art              = signType;
+            layer.feature.properties.kategorie        = 'Beschilderung';
+            layer.feature.properties.nutzungsfreigabe = date;
+            layer.bindPopup('<strong>Beschilderung</strong><br>Art: ' + signType + '<br>Nutzungsfreigabe: ' + date);
+            drawnItems.addLayer(layer);
+            addedCount++;
+        }
+    });
+
+    if (addedCount === 0) {
+        showErrorModal('Die Datei enthielt keine darstellbaren Geometrien.');
+        return;
+    }
+
+    pendingUploadGeoJSON = null;
     document.getElementById('signModal').style.display = 'none';
+    document.getElementById('uploadedFileName').style.display = 'none';
+
+    // Auf die hochgeladenen Daten zoomen
+    try {
+        var b = drawnItems.getBounds();
+        if (b.isValid()) map.fitBounds(b, { padding: [30, 30], maxZoom: 16 });
+    } catch(e) {}
+
     saveToStorage();
 }
 function cancelSign() {
-    pendingLayer = null;
+    pendingUploadGeoJSON = null;
     document.getElementById('signModal').style.display = 'none';
+    document.getElementById('uploadedFileName').style.display = 'none';
+    document.getElementById('uploadedFileName').innerText = '';
+    resetFileInput();
 }
 
 map.on(L.Draw.Event.EDITSTART, function() {
