@@ -58,9 +58,6 @@
         .leaflet-draw-edit-remove::after { content: "Löschen"; }
         .leaflet-draw-actions { left: 160px !important; margin-top: 2px !important; }
 
-        /* Im Beschilderungs-Modus die Polyline-Schaltfläche umbenennen */
-        .leaflet-container.mode-beschilderung .leaflet-draw-draw-polyline::after { content: "Beschilderung eintragen"; }
-
         .leaflet-editing-icon {
             width: 10px !important; height: 10px !important; margin-left: -5px !important; margin-top: -5px !important;
             background-color: #800020 !important; border: 2px solid white !important; border-radius: 50% !important;
@@ -94,7 +91,6 @@
         .legend-note { font-size: 11px; color: #666; line-height: 1.4; }
         .legend-note b { color: #444; }
 
-        /* ── Nachreich-Button (nur Beschilderungs-Modus) ── */
         .defer-control a {
             width: auto !important; height: 30px !important; line-height: 30px; padding: 0 12px;
             display: block; background: #fff; color: #333; font-family: Arial, sans-serif; font-size: 12px;
@@ -117,7 +113,6 @@
         .checkbox-row label { font-size: 13px; color: #333; line-height: 1.4; cursor: pointer; }
         #deferCheckError { display: none; color: #e74c3c; font-size: 11px; font-weight: bold; margin: 0 0 10px 2px; }
 
-        /* ── Sperr-Ebene "wird nachgereicht" ── */
         #deferLock {
             display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             z-index: 1400; background: rgba(236,239,247,0.92); backdrop-filter: blur(2px);
@@ -190,13 +185,6 @@
         }
         #sonstigesInput input:focus, #pointSonstigesInput input:focus { outline: none; border-color: #2c7be5; }
 
-        /* Hinweis-Box im Beschilderungs-Modal */
-        .info-hint {
-            background: #eef2fb; border: 1px solid #cdd9f3; border-radius: 8px; padding: 10px 12px;
-            font-size: 12px; color: #34507e; line-height: 1.45; margin-bottom: 12px;
-        }
-        .info-hint b { color: #233a63; }
-
         .confirm-line-btn {
             width: 100%; padding: 11px; background: #2c7be5; color: white; border: none; border-radius: 6px;
             cursor: pointer; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; margin-bottom: 8px;
@@ -211,7 +199,9 @@
 
         .modal-divider { border: none; border-top: 1px solid #e0e0e0; margin: 14px 0; }
 
-        #dateError, #pointDateError, #signDateError { display: none; color: #e74c3c; font-size: 11px; font-weight: bold; margin-top: 5px; margin-bottom: 4px; }
+        #dateError, #pointDateError, #signDateError, #deferDateError {
+            display: none; color: #e74c3c; font-size: 11px; font-weight: bold; margin-top: 5px; margin-bottom: 4px;
+        }
 
         .modal-content {
             background-color: #fff; margin: 15% auto; padding: 25px; border-radius: 8px; width: 300px; text-align: center;
@@ -233,17 +223,14 @@
         <div id="modeSelectorInner">
             <h3>Was möchten Sie eintragen?</h3>
             <p>Wählen Sie die Maßnahmenkategorie für die Sie diesen Steckbrief ausfüllen möchten.</p>
-
             <button class="mode-btn" onclick="setMode('strecke')">
                 <div class="mode-icon" style="background:#e8f4e8;">🛣️</div>
                 <div class="mode-text">Streckenmaßnahmen<small>Radwege, Brücken, Unterführungen, Fahrradzonen …</small></div>
             </button>
-
             <button class="mode-btn" onclick="setMode('abstellanlage')">
                 <div class="mode-icon" style="background:#fff3e0;">🚲</div>
                 <div class="mode-text">Abstellanlagen<small>Fahrradständer, Fahrradboxen, Parkhäuser …</small></div>
             </button>
-
             <button class="mode-btn" onclick="setMode('beschilderung')">
                 <div class="mode-icon" style="background:#e8eaf6;">🪧</div>
                 <div class="mode-text">Wegweisende Beschilderung<small>Verlauf der Beschilderung als Linie zeichnen …</small></div>
@@ -288,7 +275,6 @@
         <div class="legend-note">Zeichnen Sie den Verlauf als Linie. Bei einem <b>sehr umfangreichen Netz</b> nutzen Sie den Knopf <b>„Beschilderung wird nachgereicht"</b> oder wenden Sie sich an <b>julius.reh@tu-dresden.de</b>.</div>
     </div>
 
-    <!-- Sperr-Ebene: Beschilderung wurde als "wird nachgereicht" vermerkt -->
     <div id="deferLock">
         <div id="deferLockInner">
             <div class="defer-lock-badge">🪧 wird nachgereicht</div>
@@ -299,6 +285,7 @@
     </div>
 </div>
 
+<!-- Modal: Abstellanlagen -->
 <div id="typeModal">
     <div class="type-modal-content">
         <h4>Welche Art von Abstellanlage?</h4>
@@ -324,14 +311,15 @@
                 </select>
             </div>
             <span class="field-label">Nutzungsfreigabe</span>
-            <input type="date" id="pointDate" required oninput="clearPointDateError()" min="2023-10-01" max="2027-04-30" />
-            <div id="pointDateError">Die Nutzungsfreigabe muss zwischen 01.10.2023 und 30.04.2027 liegen.</div>
+            <input type="date" id="pointDate" required oninput="clearPointDateError()" min="2022-10-01" max="2027-04-30" />
+            <div id="pointDateError">Die Nutzungsfreigabe muss zwischen 01.10.2022 und 30.04.2027 liegen.</div>
         </div>
         <button class="confirm-line-btn" onclick="confirmPointWithDetails()">Bestätigen &amp; speichern</button>
         <button class="cancel-btn" onclick="cancelType()">Abbrechen</button>
     </div>
 </div>
 
+<!-- Modal: Streckenmaßnahmen -->
 <div id="lineModal">
     <div class="type-modal-content">
         <h4>Welche Art von Streckenmaßnahme?</h4>
@@ -351,9 +339,9 @@
             <span class="field-label">Abschnittsname (optional)</span>
             <input type="text" id="lineLabel" placeholder="z.B. Abschnitt 1" maxlength="60" />
             <span class="field-label">Baubeginn</span>
-            <input type="date" id="lineDateStart" required oninput="clearDateError()" min="2023-10-01" max="2027-04-30" />
+            <input type="date" id="lineDateStart" required oninput="clearDateError()" min="2022-10-01" max="2027-04-30" />
             <span class="field-label">Nutzungsfreigabe</span>
-            <input type="date" id="lineDateEnd" required oninput="clearDateError()" min="2023-10-01" max="2027-04-30" />
+            <input type="date" id="lineDateEnd" required oninput="clearDateError()" min="2022-10-01" max="2027-04-30" />
             <div id="dateError"></div>
         </div>
         <button class="confirm-line-btn" onclick="confirmLineWithDetails()">Bestätigen &amp; speichern</button>
@@ -361,6 +349,7 @@
     </div>
 </div>
 
+<!-- Modal: Beschilderung -->
 <div id="signModal">
     <div class="type-modal-content">
         <h4>Wegweisende Beschilderung</h4>
@@ -368,8 +357,8 @@
             <span class="field-label">Art der Beschilderung</span>
             <input type="text" id="signType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
             <span class="field-label">Nutzungsfreigabe</span>
-            <input type="date" id="signDate" oninput="clearSignDateError()" min="2023-10-01" max="2027-04-30" />
-            <div id="signDateError">Die Nutzungsfreigabe muss zwischen 01.10.2023 und 30.04.2027 liegen.</div>
+            <input type="date" id="signDate" required oninput="clearSignDateError()" min="2022-10-01" max="2027-04-30" />
+            <div id="signDateError">Die Nutzungsfreigabe muss zwischen 01.10.2022 und 30.04.2027 liegen.</div>
         </div>
         <div class="info-hint">
             <b>Hinweis:</b> Handelt es sich um ein <b>sehr umfangreiches Netz</b>, das sich nicht sinnvoll von Hand
@@ -380,6 +369,7 @@
     </div>
 </div>
 
+<!-- Modal: Kategorie wechseln -->
 <div id="confirmModal">
     <div class="modal-content" style="border-top: 4px solid #e74c3c;">
         <h4 style="color:#e74c3c;">Kategorie wechseln?</h4>
@@ -391,6 +381,7 @@
     </div>
 </div>
 
+<!-- Modal: Fehler -->
 <div id="errorModal">
     <div class="modal-content error-modal-content">
         <h4>Hinweis</h4>
@@ -417,15 +408,15 @@
             <span class="field-label">Art der Beschilderung (optional)</span>
             <input type="text" id="deferType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
             <span class="field-label">Geplante Nutzungsfreigabe (optional)</span>
-            <input type="date" id="deferDate" oninput="clearDeferDateError()" min="2023-10-01" max="2027-04-30" />
-            <div id="deferDateError">Das Datum muss zwischen 01.10.2023 und 30.04.2027 liegen.</div>
+            <input type="date" id="deferDate" oninput="clearDeferDateError()" min="2022-10-01" max="2027-04-30" />
+            <div id="deferDateError">Das Datum muss zwischen 01.10.2022 und 30.04.2027 liegen.</div>
         </div>
         <button class="confirm-line-btn" onclick="confirmDefer()">Bestätigen &amp; fortfahren</button>
         <button class="cancel-btn" onclick="cancelDefer()">Abbrechen</button>
     </div>
 </div>
 
-<!-- Info-Modal (neutrale Bestätigung) -->
+<!-- Info-Modal -->
 <div id="infoModal">
     <div class="modal-content">
         <h4>Hinweis</h4>
@@ -438,8 +429,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
 <script>
-var DATE_MIN = '2023-10-01';
+// ── Datum-Konstanten ─────────────────────────────────────────
+var DATE_MIN = '2022-10-01';
 var DATE_MAX = '2027-04-30';
+var DATE_MIN_DISPLAY = '01.10.2022';
+var DATE_MAX_DISPLAY = '30.04.2027';
+
 var FALLBACK_LAT  = 51.5;
 var FALLBACK_LNG  = 10.5;
 var FALLBACK_ZOOM = 5.5;
@@ -475,7 +470,6 @@ L.drawLocal.edit.handlers.remove.tooltip.text  = 'Klicken Sie auf ein Element zu
 var drawControl = null;
 var deferControl = null;
 
-// ── Nachreich-Button (nur Beschilderungs-Modus) ──────────────
 function addDeferControl() {
     if (deferControl) return;
     deferControl = L.control({ position: 'topleft' });
@@ -507,7 +501,6 @@ function buildDrawControl(mode) {
         drawOpts.draw.circlemarker = { color: '#800020', fillColor: '#800020', fillOpacity: 1, radius: 8 };
         drawOpts.draw.marker       = false;
     } else if (mode === 'beschilderung') {
-        // Beschilderung wird als Linie gezeichnet
         drawOpts.draw.polyline     = { shapeOptions: { color: SIGN_COLOR, weight: 5, opacity: 1 } };
         drawOpts.draw.circlemarker = false;
         drawOpts.draw.marker       = false;
@@ -542,21 +535,14 @@ function setMode(mode) {
     document.getElementById('bannerDot').style.background = labels[mode].color;
     document.getElementById('modeBanner').style.display = 'flex';
     buildDrawControl(mode);
-    var mc = map.getContainer();
-    if (mode === 'beschilderung') mc.classList.add('mode-beschilderung'); else mc.classList.remove('mode-beschilderung');
     document.getElementById('deferLock').style.display = 'none';
     if (mode === 'beschilderung') {
-        if (signDeferred) {
-            lockDeferUI();           // "wird nachgereicht": Karte sperren
-        } else {
-            addDeferControl();       // normal: zeichnen + Nachreich-Knopf
-        }
+        if (signDeferred) { lockDeferUI(); } else { addDeferControl(); }
     } else {
         removeDeferControl();
     }
 }
 
-// Karte für eine als "nachgereicht" vermerkte Beschilderung sperren
 function lockDeferUI() {
     signDeferred = true;
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
@@ -566,7 +552,6 @@ function lockDeferUI() {
     if (bt) bt.innerText = 'Kategorie: Beschilderung — wird nachgereicht';
 }
 
-// Bewusst entsperren, um die Maßnahme doch jetzt einzutragen
 function unlockDefer() {
     signDeferred = false;
     document.getElementById('deferLock').style.display = 'none';
@@ -605,7 +590,6 @@ function doShowModeSelector() {
     document.getElementById('legendLines').style.display  = 'none';
     document.getElementById('legendSign').style.display   = 'none';
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
-    map.getContainer().classList.remove('mode-beschilderung');
     removeDeferControl();
     signDeferred = false;
     document.getElementById('deferLock').style.display = 'none';
@@ -636,7 +620,6 @@ function restoreFromGeoJSON(geoData) {
     L.geoJSON(geoData, {
         pointToLayer: function(feature, latlng) {
             var props = feature.properties || {};
-            if (props.kategorie === 'Beschilderung') return L.marker(latlng);
             var color = '#555';
             if (props.typ && pointColorMap[props.typ]) color = pointColorMap[props.typ];
             return L.circleMarker(latlng, { color: color, fillColor: color, fillOpacity: 1, radius: 8 });
@@ -702,7 +685,6 @@ window.addEventListener('message', function(event) {
             viewKey    = 'karteView_'    + karteId;
             drawnItems.clearLayers();
             if (drawControl) { map.removeControl(drawControl); drawControl = null; }
-            map.getContainer().classList.remove('mode-beschilderung');
             removeDeferControl();
             signDeferred = false;
             document.getElementById('deferLock').style.display = 'none';
@@ -724,22 +706,22 @@ window.addEventListener('message', function(event) {
         }
     }
 
-   if (event.data.type === 'restoreData' && event.data.geojson) {
-    try {
-        var geoData = JSON.parse(event.data.geojson);
-        if (drawnItems.getLayers().length === 0) {
-            var existingData = sessionStorage.getItem(storageKey);
-            if (!existingData) {
-                restoreFromGeoJSON(geoData);
-                sessionStorage.setItem(storageKey, event.data.geojson);
+    if (event.data.type === 'restoreData' && event.data.geojson) {
+        try {
+            var geoData = JSON.parse(event.data.geojson);
+            if (drawnItems.getLayers().length === 0) {
+                var existingData = sessionStorage.getItem(storageKey);
+                if (!existingData) {
+                    restoreFromGeoJSON(geoData);
+                    sessionStorage.setItem(storageKey, event.data.geojson);
+                }
+                var modeFromData = getModeFromGeoJSON(geoData);
+                signDeferred = isDeferredGeo(geoData);
+                if (modeFromData && !currentMode) setMode(modeFromData);
+                maybeMarkDeferred(geoData);
             }
-            var modeFromData = getModeFromGeoJSON(geoData);
-            signDeferred = isDeferredGeo(geoData);
-            if (modeFromData && !currentMode) setMode(modeFromData);
-            maybeMarkDeferred(geoData);
-        }
-    } catch(e) {}
-}
+        } catch(e) {}
+    }
 });
 
 function saveToStorage() {
@@ -781,14 +763,12 @@ map.on(L.Draw.Event.CREATED, function(event) {
         document.getElementById('typeModal').style.display = 'block';
     } else if (event.layerType === 'polyline') {
         if (currentMode === 'beschilderung') {
-            // Beschilderungs-Linie: Art + Datum abfragen
             document.getElementById('signType').value = '';
             document.getElementById('signDate').value = '';
             document.getElementById('signDateError').style.display = 'none';
             document.getElementById('signDate').classList.remove('error');
             document.getElementById('signModal').style.display = 'block';
         } else {
-            // Streckenmaßnahme
             selectedLineType = null; selectedLineColor = null; selectedLineSolid = false;
             document.getElementById('sonstigesInput').style.display = 'none';
             document.getElementById('sonstigesText').value = '';
@@ -822,9 +802,20 @@ function clearSignDateError() {
     document.getElementById('signDateError').style.display = 'none';
     document.getElementById('signDate').classList.remove('error');
 }
+function clearDeferDateError() {
+    document.getElementById('deferDateError').style.display = 'none';
+    document.getElementById('deferDate').classList.remove('error');
+}
+
 function validateDate(dateStr, fieldEl, errorEl) {
-    if (!dateStr) { errorEl.innerText = 'Bitte ein Datum eingeben.'; errorEl.style.display = 'block'; fieldEl.classList.add('error'); return false; }
-    if (!isDateInRange(dateStr)) { errorEl.innerText = 'Das Datum muss zwischen 01.10.2023 und 30.04.2027 liegen.'; errorEl.style.display = 'block'; fieldEl.classList.add('error'); return false; }
+    if (!dateStr) {
+        errorEl.innerText = 'Bitte ein Datum eingeben.';
+        errorEl.style.display = 'block'; fieldEl.classList.add('error'); return false;
+    }
+    if (!isDateInRange(dateStr)) {
+        errorEl.innerText = 'Das Datum muss zwischen ' + DATE_MIN_DISPLAY + ' und ' + DATE_MAX_DISPLAY + ' liegen.';
+        errorEl.style.display = 'block'; fieldEl.classList.add('error'); return false;
+    }
     errorEl.style.display = 'none'; fieldEl.classList.remove('error'); return true;
 }
 
@@ -834,6 +825,7 @@ function selectPointType(typeName, color, btn) {
     btn.classList.add('selected');
 }
 function showPointSonstigesInput() { document.getElementById('pointSonstigesInput').style.display = 'block'; document.getElementById('pointSonstigesText').focus(); }
+
 function confirmPointWithDetails() {
     if (!pendingLayer) return;
     var typeName = selectedPointType, color = selectedPointColor;
@@ -879,6 +871,7 @@ function selectLineType(typeName, color, solid, btn) {
     btn.classList.add('selected');
 }
 function showSonstigesInput() { document.getElementById('sonstigesInput').style.display = 'block'; document.getElementById('sonstigesText').focus(); }
+
 function confirmLineWithDetails() {
     if (!pendingLayer) return;
     var typeName = selectedLineType, color = selectedLineColor;
@@ -894,12 +887,27 @@ function confirmLineWithDetails() {
     var errEl   = document.getElementById('dateError');
     var startEl = document.getElementById('lineDateStart');
     var endEl   = document.getElementById('lineDateEnd');
-    if (!dateStart) { errEl.innerText = 'Bitte einen Baubeginn eingeben.'; errEl.style.display = 'block'; startEl.classList.add('error'); return; }
-    if (!isDateInRange(dateStart)) { errEl.innerText = 'Der Baubeginn muss zwischen 01.10.2023 und 30.04.2027 liegen.'; errEl.style.display = 'block'; startEl.classList.add('error'); startEl.focus(); return; }
+    if (!dateStart) {
+        errEl.innerText = 'Bitte einen Baubeginn eingeben.';
+        errEl.style.display = 'block'; startEl.classList.add('error'); return;
+    }
+    if (!isDateInRange(dateStart)) {
+        errEl.innerText = 'Der Baubeginn muss zwischen ' + DATE_MIN_DISPLAY + ' und ' + DATE_MAX_DISPLAY + ' liegen.';
+        errEl.style.display = 'block'; startEl.classList.add('error'); startEl.focus(); return;
+    }
     startEl.classList.remove('error');
-    if (!dateEnd) { errEl.innerText = 'Bitte eine Nutzungsfreigabe eingeben.'; errEl.style.display = 'block'; endEl.classList.add('error'); return; }
-    if (!isDateInRange(dateEnd)) { errEl.innerText = 'Die Nutzungsfreigabe muss zwischen 01.10.2023 und 30.04.2027 liegen.'; errEl.style.display = 'block'; endEl.classList.add('error'); endEl.focus(); return; }
-    if (dateEnd <= dateStart) { errEl.innerText = 'Die Nutzungsfreigabe muss nach dem Baubeginn liegen.'; errEl.style.display = 'block'; startEl.classList.add('error'); endEl.classList.add('error'); endEl.focus(); return; }
+    if (!dateEnd) {
+        errEl.innerText = 'Bitte eine Nutzungsfreigabe eingeben.';
+        errEl.style.display = 'block'; endEl.classList.add('error'); return;
+    }
+    if (!isDateInRange(dateEnd)) {
+        errEl.innerText = 'Die Nutzungsfreigabe muss zwischen ' + DATE_MIN_DISPLAY + ' und ' + DATE_MAX_DISPLAY + ' liegen.';
+        errEl.style.display = 'block'; endEl.classList.add('error'); endEl.focus(); return;
+    }
+    if (dateEnd <= dateStart) {
+        errEl.innerText = 'Die Nutzungsfreigabe muss nach dem Baubeginn liegen.';
+        errEl.style.display = 'block'; startEl.classList.add('error'); endEl.classList.add('error'); endEl.focus(); return;
+    }
     errEl.style.display = 'none'; endEl.classList.remove('error');
     var lineStyle = selectedLineSolid ? { color: color, weight: 5, opacity: 1 } : { color: color, weight: 5, opacity: 1, dashArray: '8, 6' };
     pendingLayer.setStyle(lineStyle);
@@ -925,7 +933,7 @@ function cancelLine() {
     document.getElementById('sonstigesText').value = '';
 }
 
-// ── Beschilderung: gezeichnete Linie speichern ────────────────
+// ── Beschilderung: Linie speichern (Pflichtfeld: Art + Datum) ─
 function confirmSignWithDetails() {
     if (!pendingLayer) return;
     var signType = document.getElementById('signType').value.trim();
@@ -954,7 +962,6 @@ function showInfoModal(m) { document.getElementById('infoModalText').innerText =
 function closeInfoModal() { document.getElementById('infoModal').style.display = 'none'; }
 
 function toggleDeferCheck(ev) {
-    // Klick auf die Zeile (außer direkt auf die Checkbox) schaltet die Checkbox um
     if (ev && ev.target && ev.target.id === 'deferCheck') return;
     var cb = document.getElementById('deferCheck');
     cb.checked = !cb.checked;
@@ -964,15 +971,10 @@ function clearDeferCheckError() {
     document.getElementById('deferCheckError').style.display = 'none';
     document.getElementById('deferCheckRow').classList.remove('error');
 }
-function clearDeferDateError() {
-    document.getElementById('deferDateError').style.display = 'none';
-    document.getElementById('deferDate').classList.remove('error');
-}
 
 function openDeferModal() {
-    // Falls schon eine Linie gezeichnet wurde, keinen Platzhalter anbieten
     if (drawnItems.getLayers().length > 0) {
-        showInfoModal('Sie haben bereits eine Beschilderung eingezeichnet – die Zeichnung wurde gespeichert. Wenn Sie die Beschilderung stattdessen nachreichen möchten, können Sie die aktuelle Zeichnung über „Löschen“ entfernen und anschließend „Beschilderung wird nachgereicht“ auswählen.');
+        showInfoModal('Sie haben bereits eine Beschilderung eingezeichnet. Wenn Sie die Beschilderung stattdessen nachreichen möchten, entfernen Sie zuerst die Zeichnung über „Löschen" und wählen Sie anschließend „Beschilderung wird nachgereicht".');
         return;
     }
     document.getElementById('deferCheck').checked = false;
@@ -1008,17 +1010,13 @@ function confirmDefer() {
     var jsonStr = JSON.stringify(fc);
     try { sessionStorage.setItem(storageKey, jsonStr); } catch(e) {}
     window.parent.postMessage(jsonStr, '*');
-
     document.getElementById('deferModal').style.display = 'none';
     lockDeferUI();
     showInfoModal('Vielen Dank. Es wurde vermerkt, dass die Beschilderung nachgereicht wird. Sie können nun fortfahren.');
 }
 
-function cancelDefer() {
-    document.getElementById('deferModal').style.display = 'none';
-}
+function cancelDefer() { document.getElementById('deferModal').style.display = 'none'; }
 
-// Banner-Hinweis setzen, falls gespeicherte Daten "nachgereicht" sind
 function maybeMarkDeferred(geoData) {
     try {
         var f = geoData.features && geoData.features[0];
