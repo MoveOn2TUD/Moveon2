@@ -407,9 +407,10 @@
         </div>
         <div id="deferCheckError">Bitte bestätigen Sie, dass Sie die Beschilderung nachreichen.</div>
         <div class="section-fields">
-            <span class="field-label">Art der Beschilderung (optional)</span>
+            <span class="field-label">Art der Beschilderung</span>
             <input type="text" id="deferType" placeholder="z. B. Wegweisung, Hinweisschild" maxlength="80" />
-            <span class="field-label">Geplante Nutzungsfreigabe (optional)</span>
+            <div id="deferTypeError" style="display:none; color:#e74c3c; font-size:11px; font-weight:bold; margin-top:5px;">Bitte die Art der Beschilderung eingeben.</div>
+            <span class="field-label">Geplante Nutzungsfreigabe</span>
             <input type="date" id="deferDate" oninput="clearDeferDateError()" min="2022-10-01" max="2027-04-30" />
             <div id="deferDateError">Das Datum muss zwischen 01.10.2022 und 30.04.2027 liegen.</div>
         </div>
@@ -988,6 +989,8 @@ function openDeferModal() {
     document.getElementById('deferDate').value = '';
     clearDeferCheckError();
     clearDeferDateError();
+    document.getElementById('deferTypeError').style.display = 'none';
+    document.getElementById('deferType').classList.remove('error');
     document.getElementById('deferModal').style.display = 'block';
 }
 
@@ -1000,11 +1003,19 @@ function confirmDefer() {
     }
     var artVal  = document.getElementById('deferType').value.trim();
     var dateVal = document.getElementById('deferDate').value;
-    if (dateVal && !isDateInRange(dateVal)) {
-        document.getElementById('deferDateError').style.display = 'block';
-        document.getElementById('deferDate').classList.add('error');
+
+    // Art der Beschilderung ist Pflicht
+    if (!artVal) {
+        document.getElementById('deferTypeError').style.display = 'block';
+        document.getElementById('deferType').classList.add('error');
         return;
     }
+    document.getElementById('deferTypeError').style.display = 'none';
+    document.getElementById('deferType').classList.remove('error');
+
+    // Datum ist Pflicht
+    if (!validateDate(dateVal, document.getElementById('deferDate'), document.getElementById('deferDateError'))) return;
+
     var fc = {
         type: 'FeatureCollection',
         features: [{
