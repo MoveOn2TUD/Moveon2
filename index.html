@@ -972,7 +972,7 @@ function clearDeferDateError() {
 function openDeferModal() {
     // Falls schon eine Linie gezeichnet wurde, keinen Platzhalter anbieten
     if (drawnItems.getLayers().length > 0) {
-        showInfoModal('Sie haben bereits eine Beschilderung eingezeichnet. Diese ist gespeichert – ein Nachreichen ist nicht nötig.');
+        showInfoModal('Sie haben bereits eine Beschilderung eingezeichnet. Die Zeichnung wurde gespeichert und muss nicht erneut eingereicht werden. Wenn Sie die Beschilderung stattdessen nachreichen möchten, können Sie die aktuelle Zeichnung über „Löschen“ entfernen und anschließend „Beschilderung wird nachgereicht“ auswählen.');
         return;
     }
     document.getElementById('deferCheck').checked = false;
