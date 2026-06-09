@@ -54,6 +54,8 @@
         .leaflet-draw-draw-polyline::after    { content: "Streckenmaßnahme eintragen"; }
         .leaflet-draw-draw-circlemarker::after { content: "Abstellanlage eintragen"; }
         .leaflet-draw-draw-marker::after       { content: "Beschilderung eintragen"; }
+        /* Im Beschilderungs-Modus: Polyline-Button als "Beschilderung eintragen" beschriften */
+        .leaflet-container.mode-beschilderung .leaflet-draw-draw-polyline::after { content: "Beschilderung eintragen"; }
         .leaflet-draw-edit-edit::after  { content: "Bearbeiten"; }
         .leaflet-draw-edit-remove::after { content: "Löschen"; }
         .leaflet-draw-actions { left: 160px !important; margin-top: 2px !important; }
@@ -535,6 +537,8 @@ function setMode(mode) {
     document.getElementById('bannerDot').style.background = labels[mode].color;
     document.getElementById('modeBanner').style.display = 'flex';
     buildDrawControl(mode);
+    var mc = map.getContainer();
+    if (mode === 'beschilderung') mc.classList.add('mode-beschilderung'); else mc.classList.remove('mode-beschilderung');
     document.getElementById('deferLock').style.display = 'none';
     if (mode === 'beschilderung') {
         if (signDeferred) { lockDeferUI(); } else { addDeferControl(); }
@@ -590,6 +594,7 @@ function doShowModeSelector() {
     document.getElementById('legendLines').style.display  = 'none';
     document.getElementById('legendSign').style.display   = 'none';
     if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+    map.getContainer().classList.remove('mode-beschilderung');
     removeDeferControl();
     signDeferred = false;
     document.getElementById('deferLock').style.display = 'none';
@@ -685,6 +690,7 @@ window.addEventListener('message', function(event) {
             viewKey    = 'karteView_'    + karteId;
             drawnItems.clearLayers();
             if (drawControl) { map.removeControl(drawControl); drawControl = null; }
+            map.getContainer().classList.remove('mode-beschilderung');
             removeDeferControl();
             signDeferred = false;
             document.getElementById('deferLock').style.display = 'none';
